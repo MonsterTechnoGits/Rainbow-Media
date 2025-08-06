@@ -25,19 +25,22 @@ const nextConfig = {
   // Enable trailing slash for GitHub Pages
   trailingSlash: true,
 
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin-allow-popups',
-          },
-        ],
-      },
-    ];
-  },
+  // Headers don't work with static export, but keeping for development
+  ...(process.env.NODE_ENV === 'development' && {
+    async headers() {
+      return [
+        {
+          source: '/(.*)',
+          headers: [
+            {
+              key: 'Cross-Origin-Opener-Policy',
+              value: 'same-origin-allow-popups',
+            },
+          ],
+        },
+      ];
+    },
+  }),
 };
 
 module.exports = nextConfig;

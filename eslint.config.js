@@ -11,7 +11,19 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'build', 'coverage', '.next/**/*'] },
+  {
+    ignores: [
+      'dist',
+      'node_modules',
+      'build',
+      'coverage',
+      '.next/**/*',
+      'out/**/*', // Ignore Next.js export output
+      '**/*.min.js',
+      '**/*_buildManifest.js',
+      '**/*_ssgManifest.js',
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx,js,jsx}'],
