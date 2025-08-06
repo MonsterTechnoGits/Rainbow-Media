@@ -11,6 +11,9 @@ export const mockMusicTracks: MusicTrack[] = [
     coverUrl: 'https://i.scdn.co/image/ab67616d0000b273ef5d0edc0e22620a2f2c7b2f',
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', // Free sample
     genre: 'Pop',
+    paid: true,
+    amount: 5,
+    currency: 'INR',
   },
   {
     id: '2',
@@ -21,6 +24,9 @@ export const mockMusicTracks: MusicTrack[] = [
     coverUrl: 'https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96',
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
     genre: 'Pop',
+    paid: false,
+    amount: 5,
+    currency: 'INR',
   },
   {
     id: '3',
@@ -31,6 +37,9 @@ export const mockMusicTracks: MusicTrack[] = [
     coverUrl: 'https://i.scdn.co/image/ab67616d0000b273ef5d0edc0e22620a2f2c7b2f',
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
     genre: 'Pop',
+    paid: true,
+    amount: 5,
+    currency: 'INR',
   },
   {
     id: '4',
@@ -41,6 +50,9 @@ export const mockMusicTracks: MusicTrack[] = [
     coverUrl: 'https://i.scdn.co/image/ab67616d0000b273ef5d0edc0e22620a2f2c7b2f',
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
     genre: 'Pop Rock',
+    paid: false,
+    amount: 5,
+    currency: 'INR',
   },
   {
     id: '5',
@@ -51,6 +63,9 @@ export const mockMusicTracks: MusicTrack[] = [
     coverUrl: 'https://i.scdn.co/image/ab67616d0000b273ef5d0edc0e22620a2f2c7b2f',
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
     genre: 'Hip Hop',
+    paid: true,
+    amount: 5,
+    currency: 'INR',
   },
   {
     id: '6',
@@ -61,6 +76,9 @@ export const mockMusicTracks: MusicTrack[] = [
     coverUrl: 'https://i.scdn.co/image/ab67616d0000b273ef5d0edc0e22620a2f2c7b2f',
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
     genre: 'Pop',
+    paid: false,
+    amount: 5,
+    currency: 'INR',
   },
   {
     id: '7',
@@ -71,6 +89,9 @@ export const mockMusicTracks: MusicTrack[] = [
     coverUrl: 'https://i.scdn.co/image/ab67616d0000b273ef5d0edc0e22620a2f2c7b2f',
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3',
     genre: 'R&B',
+    paid: true,
+    amount: 5,
+    currency: 'INR',
   },
   {
     id: '8',
@@ -81,6 +102,9 @@ export const mockMusicTracks: MusicTrack[] = [
     coverUrl: 'https://i.scdn.co/image/ab67616d0000b273ef5d0edc0e22620a2f2c7b2f',
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
     genre: 'Pop Rock',
+    paid: false,
+    amount: 5,
+    currency: 'INR',
   },
 ];
 

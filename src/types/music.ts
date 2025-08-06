@@ -7,6 +7,9 @@ export interface MusicTrack {
   coverUrl: string;
   audioUrl: string;
   genre: string;
+  paid: boolean; // true if the track is paid
+  amount?: number; // price in the specified currency
+  currency?: string; // currency code, e.g., 'INR'
 }
 
 export interface PlayerState {
@@ -24,3 +27,20 @@ export interface PlayerState {
 }
 
 export type PlayerDrawerState = 'closed' | 'mini' | 'expanded';
+
+export interface User {
+  uid: string;
+  email: string;
+  displayName?: string;
+  photoURL?: string;
+  purchases: string[]; // Array of purchased track IDs
+}
+
+export interface PurchaseDetails {
+  trackId: string;
+  amount: number;
+  currency: string;
+  paymentId: string;
+  orderId: string;
+  timestamp: number;
+}

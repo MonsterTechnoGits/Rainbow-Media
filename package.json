@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "npm run pre-check && next build",
+    "export": "next build",
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",

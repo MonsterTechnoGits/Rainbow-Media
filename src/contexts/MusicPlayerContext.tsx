@@ -26,6 +26,13 @@ interface MusicPlayerContextType {
   toggleShuffle: () => void;
   toggleRepeat: () => void;
   audioRef: React.RefObject<HTMLAudioElement | null>;
+  // Payment and auth related
+  showAuthDrawer: boolean;
+  setShowAuthDrawer: (show: boolean) => void;
+  showPaymentDrawer: boolean;
+  setShowPaymentDrawer: (show: boolean) => void;
+  pendingTrack: MusicTrack | null;
+  setPendingTrack: (track: MusicTrack | null) => void;
 }
 
 type PlayerAction =
@@ -113,6 +120,9 @@ const MusicPlayerContext = createContext<MusicPlayerContextType | undefined>(und
 export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(playerReducer, initialState);
   const [drawerState, setDrawerState] = React.useState<PlayerDrawerState>('closed');
+  const [showAuthDrawer, setShowAuthDrawer] = React.useState(false);
+  const [showPaymentDrawer, setShowPaymentDrawer] = React.useState(false);
+  const [pendingTrack, setPendingTrack] = React.useState<MusicTrack | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const playTrack = (track: MusicTrack, trackList?: MusicTrack[]) => {
@@ -287,6 +297,12 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     toggleShuffle,
     toggleRepeat,
     audioRef,
+    showAuthDrawer,
+    setShowAuthDrawer,
+    showPaymentDrawer,
+    setShowPaymentDrawer,
+    pendingTrack,
+    setPendingTrack,
   };
 
   return (

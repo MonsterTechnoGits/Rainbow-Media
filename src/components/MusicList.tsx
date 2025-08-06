@@ -18,7 +18,10 @@ import {
 } from '@mui/material';
 import React from 'react';
 
+import AuthDrawer from '@/components/AuthDrawer';
 import Iconify from '@/components/iconify';
+import PaymentDrawer from '@/components/PaymentDrawer';
+import { useAuth } from '@/contexts/AuthContext';
 import { useComments } from '@/contexts/CommentContext';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 import { formatDuration } from '@/data/musicData';
@@ -30,19 +33,73 @@ interface MusicListProps {
 }
 
 const MusicList: React.FC<MusicListProps> = ({ tracks, title = 'Your Music' }) => {
-  const { state, playTrack, pauseTrack, resumeTrack } = useMusicPlayer();
+  const {
+    state,
+    playTrack,
+    pauseTrack,
+    resumeTrack,
+    showAuthDrawer,
+    setShowAuthDrawer,
+    showPaymentDrawer,
+    setShowPaymentDrawer,
+    pendingTrack,
+    setPendingTrack,
+  } = useMusicPlayer();
+  const { user, hasPurchased } = useAuth();
   const { getTrackLike, getTrackComments } = useComments();
   const theme = useTheme();
 
   const handleTrackClick = (track: MusicTrack) => {
+    // If it's the same track, just toggle play/pause
     if (state.currentTrack?.id === track.id) {
       if (state.isPlaying) {
         pauseTrack();
       } else {
         resumeTrack();
       }
-    } else {
-      playTrack(track, tracks);
+      return;
+    }
+
+    // Check if track is paid
+    if (track.paid) {
+      // Check if user is authenticated
+      if (!user) {
+        setPendingTrack(track);
+        setShowAuthDrawer(true);
+        return;
+      }
+
+      // Check if user has already purchased the track
+      if (!hasPurchased(track.id)) {
+        setPendingTrack(track);
+        setShowPaymentDrawer(true);
+        return;
+      }
+    }
+
+    // Play the track if it's free or user has purchased it
+    playTrack(track, tracks);
+  };
+
+  const handleAuthSuccess = () => {
+    if (pendingTrack && !pendingTrack.paid) {
+      // If track is free, play it after authentication
+      playTrack(pendingTrack, tracks);
+      setPendingTrack(null);
+    } else if (pendingTrack && pendingTrack.paid && hasPurchased(pendingTrack.id)) {
+      // If user already purchased it, play it
+      playTrack(pendingTrack, tracks);
+      setPendingTrack(null);
+    } else if (pendingTrack && pendingTrack.paid) {
+      // If track is paid and not purchased, show payment drawer
+      setShowPaymentDrawer(true);
+    }
+  };
+
+  const handlePaymentSuccess = () => {
+    if (pendingTrack) {
+      playTrack(pendingTrack, tracks);
+      setPendingTrack(null);
     }
   };
 
@@ -325,16 +382,46 @@ const MusicList: React.FC<MusicListProps> = ({ tracks, title = 'Your Music' }) =
                         </Typography>
 
                         <Stack direction="row" alignItems="center" justifyContent="space-between">
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              color: alpha(theme.palette.text.secondary, 0.8),
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                            }}
-                          >
-                            {track.album} • {formatDuration(track.duration)}
-                          </Typography>
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: alpha(theme.palette.text.secondary, 0.8),
+                                fontSize: '0.75rem',
+                                fontWeight: 500,
+                              }}
+                            >
+                              {track.album} • {formatDuration(track.duration)}
+                            </Typography>
+                            {track.paid && (
+                              <Chip
+                                label={
+                                  user && hasPurchased(track.id)
+                                    ? 'Purchased'
+                                    : `₹${track.amount || 5}`
+                                }
+                                size="small"
+                                sx={{
+                                  height: 16,
+                                  fontSize: '0.6rem',
+                                  fontWeight: 600,
+                                  bgcolor:
+                                    user && hasPurchased(track.id)
+                                      ? alpha(theme.palette.success.main, 0.1)
+                                      : alpha(theme.palette.warning.main, 0.1),
+                                  color:
+                                    user && hasPurchased(track.id)
+                                      ? theme.palette.success.main
+                                      : theme.palette.warning.main,
+                                  border: `1px solid ${
+                                    user && hasPurchased(track.id)
+                                      ? alpha(theme.palette.success.main, 0.2)
+                                      : alpha(theme.palette.warning.main, 0.2)
+                                  }`,
+                                }}
+                              />
+                            )}
+                          </Stack>
 
                           <Stack direction="row" spacing={2}>
                             <Paper
@@ -441,6 +528,23 @@ const MusicList: React.FC<MusicListProps> = ({ tracks, title = 'Your Music' }) =
           })
         )}
       </List>
+
+      {/* Authentication Drawer */}
+      <AuthDrawer
+        open={showAuthDrawer}
+        onClose={() => setShowAuthDrawer(false)}
+        trackTitle={pendingTrack?.title}
+        trackPrice={pendingTrack?.amount}
+        onAuthSuccess={handleAuthSuccess}
+      />
+
+      {/* Payment Drawer */}
+      <PaymentDrawer
+        open={showPaymentDrawer}
+        onClose={() => setShowPaymentDrawer(false)}
+        track={pendingTrack}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
     </Box>
   );
 };
