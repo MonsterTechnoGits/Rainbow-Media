@@ -12,15 +12,15 @@ A modern music streaming platform built with Next.js, Firebase, and Razorpay pay
 
 ## Live Demo
 
-🚀 **[View Live Demo](https://yourusername.github.io/RainbowMedia/)**
+🚀 **[View Live Demo](https://yourusername.github.io/Rainbow-Media/)**
 
 ## Quick Setup
 
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/yourusername/RainbowMedia.git
-cd RainbowMedia
+git clone https://github.com/yourusername/Rainbow-Media.git
+cd Rainbow-Media
 npm install
 ```
 

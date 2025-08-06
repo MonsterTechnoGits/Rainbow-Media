@@ -16,11 +16,11 @@ const nextConfig = {
     unoptimized: true,
   },
   
-  // Set base path for GitHub Pages (update 'RainbowMedia' to your actual repo name)
-  basePath: process.env.NODE_ENV === 'production' ? '/RainbowMedia' : '',
+  // Set base path for GitHub Pages
+  basePath: process.env.NODE_ENV === 'production' ? '/Rainbow-Media' : '',
   
   // Ensure assets work with base path
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/RainbowMedia/' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/Rainbow-Media/' : '',
   
   // Enable trailing slash for GitHub Pages
   trailingSlash: true,
