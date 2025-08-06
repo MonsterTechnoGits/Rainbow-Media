@@ -1,16 +1,16 @@
-import js from '@eslint/js';
-import nextPlugin from '@next/eslint-plugin-next';
-import importPlugin from 'eslint-plugin-import';
-import jsxA11y from 'eslint-plugin-jsx-a11y';
-import prettier from 'eslint-plugin-prettier';
-import react from 'eslint-plugin-react';
-import reactHooks from 'eslint-plugin-react-hooks';
-import reactRefresh from 'eslint-plugin-react-refresh';
-import unusedImports from 'eslint-plugin-unused-imports';
-import globals from 'globals';
-import tseslint from 'typescript-eslint';
+const js = require('@eslint/js');
+const nextPlugin = require('@next/eslint-plugin-next');
+const importPlugin = require('eslint-plugin-import');
+const jsxA11y = require('eslint-plugin-jsx-a11y');
+const prettier = require('eslint-plugin-prettier');
+const react = require('eslint-plugin-react');
+const reactHooks = require('eslint-plugin-react-hooks');
+const reactRefresh = require('eslint-plugin-react-refresh');
+const unusedImports = require('eslint-plugin-unused-imports');
+const globals = require('globals');
+const tseslint = require('typescript-eslint');
 
-export default tseslint.config(
+module.exports = tseslint.config(
   {
     ignores: [
       'dist',
