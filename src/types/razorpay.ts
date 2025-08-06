@@ -28,9 +28,9 @@ export interface RazorpayOptions {
   };
   config?: {
     display?: {
-      blocks?: any;
+      blocks?: Record<string, unknown>;
       sequence?: string[];
-      hide?: any[];
+      hide?: Record<string, unknown>[];
       preferences?: {
         show_default_blocks?: boolean;
       };

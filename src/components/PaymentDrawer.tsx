@@ -21,8 +21,6 @@ import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { MusicTrack, PurchaseDetails } from '@/types/music';
-import { RazorpayOptions, RazorpayResponse } from '@/types/razorpay';
-import Script from 'next/script';
 
 interface PaymentDrawerProps {
   open: boolean;
@@ -47,10 +45,10 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
         resolve();
         return;
       }
-      
+
       const maxAttempts = 20; // Wait up to 4 seconds
       let attempts = 0;
-      
+
       const checkInterval = setInterval(() => {
         attempts++;
         if (window.Razorpay) {
@@ -77,9 +75,9 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
       console.log('Waiting for Razorpay script to load...');
       await waitForRazorpay();
       console.log('Razorpay script loaded successfully, typeof:', typeof window.Razorpay);
-      
+
       // Add small delay to ensure everything is ready
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       console.log('Additional delay completed');
     } catch (error) {
       console.error('Razorpay script loading failed:', error);
@@ -122,9 +120,11 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
       }
 
       // Detect mobile device
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
       console.log('Is Mobile Device:', isMobile);
-      
+
       // EXACT copy of working test page configuration
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
@@ -133,10 +133,10 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
         name: 'RainbowMedia Test', // Same name as test page
         description: 'Test Payment', // Same description as test page
         order_id: orderData.id,
-        handler: function (response: any) {
+        handler: function (response: { razorpay_payment_id: string; razorpay_order_id: string }) {
           console.log('✅ Payment Successful! Payment ID:', response.razorpay_payment_id);
           setLoading(false);
-          
+
           // Process the payment asynchronously
           (async () => {
             try {
@@ -168,7 +168,9 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
               onClose();
             } catch (error) {
               console.error('Error processing successful payment:', error);
-              alert('Payment successful, but there was an error saving your purchase. Please contact support.');
+              alert(
+                'Payment successful, but there was an error saving your purchase. Please contact support.'
+              );
             }
           })();
         },
@@ -202,48 +204,67 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
       console.log('Razorpay key (first 8 chars):', options.key.substring(0, 8));
       console.log('Order amount:', orderData.amount);
       console.log('Order currency:', orderData.currency);
-      
+
       // Check for script conflicts
-      const scripts = Array.from(document.querySelectorAll('script')).filter(s => s.src.includes('razorpay') || s.src.includes('checkout'));
-      console.log('Razorpay scripts loaded:', scripts.map(s => s.src));
-      console.log('Window keys with "razor":', Object.keys(window).filter(k => k.toLowerCase().includes('razor')));
-      
-      console.log('Full options object:', JSON.stringify({
-        ...options,
-        handler: '[Function]'
-      }, null, 2));
-      
+      const scripts = Array.from(document.querySelectorAll('script')).filter(
+        (s) => s.src.includes('razorpay') || s.src.includes('checkout')
+      );
+      console.log(
+        'Razorpay scripts loaded:',
+        scripts.map((s) => s.src)
+      );
+      console.log(
+        'Window keys with "razor":',
+        Object.keys(window).filter((k) => k.toLowerCase().includes('razor'))
+      );
+
+      console.log(
+        'Full options object:',
+        JSON.stringify(
+          {
+            ...options,
+            handler: '[Function]',
+          },
+          null,
+          2
+        )
+      );
+
       try {
         console.log('Creating Razorpay instance...');
-        
+
         // Force clean Razorpay instance
         const RazorpayConstructor = window.Razorpay;
         const paymentObject = new RazorpayConstructor(options);
-        
+
         console.log('Razorpay instance created successfully, type:', typeof paymentObject);
         console.log('PaymentObject methods:', Object.getOwnPropertyNames(paymentObject));
-        
+
         // Add delay before opening to ensure DOM is ready
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
         console.log('Opening Razorpay modal...');
-        
+
         // Add global error listener to catch Razorpay internal errors
         const originalOnError = window.onerror;
         const originalOnUnhandledRejection = window.onunhandledrejection;
-        
+
         window.onerror = (message, source, lineno, colno, error) => {
           console.error('🚨 Window Error (possibly from Razorpay):', {
-            message, source, lineno, colno, error
+            message,
+            source,
+            lineno,
+            colno,
+            error,
           });
           if (originalOnError) originalOnError(message, source, lineno, colno, error);
         };
-        
+
         window.onunhandledrejection = (event) => {
           console.error('🚨 Unhandled Rejection (possibly from Razorpay):', event.reason);
           if (originalOnUnhandledRejection) originalOnUnhandledRejection.call(window, event);
         };
-        
+
         // Monitor for any alerts
         const originalAlert = window.alert;
         window.alert = (message) => {
@@ -251,13 +272,14 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
           console.trace('Alert stack trace');
           return originalAlert(message);
         };
-        
+
         // Try to isolate Razorpay from CSS conflicts
-        document.body.style.cssText += '; position: relative !important; z-index: 999999 !important;';
-        
+        document.body.style.cssText +=
+          '; position: relative !important; z-index: 999999 !important;';
+
         paymentObject.open();
         console.log('Razorpay modal opened successfully');
-        
+
         // Restore after 5 seconds
         setTimeout(() => {
           window.onerror = originalOnError;
@@ -267,18 +289,26 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
       } catch (razorpayError) {
         console.error('=== RAZORPAY ERROR ===');
         console.error('Error type:', typeof razorpayError);
-        console.error('Error message:', razorpayError instanceof Error ? razorpayError.message : razorpayError);
-        console.error('Error stack:', razorpayError instanceof Error ? razorpayError.stack : 'No stack');
+        console.error(
+          'Error message:',
+          razorpayError instanceof Error ? razorpayError.message : razorpayError
+        );
+        console.error(
+          'Error stack:',
+          razorpayError instanceof Error ? razorpayError.stack : 'No stack'
+        );
         console.error('=== END RAZORPAY ERROR ===');
-        
+
         // Handle mobile browser compatibility issues
         if (isMobile) {
-          alert('⚠️ Mobile Payment Issue\n\nPlease try:\n1. Open in Chrome mobile browser\n2. Enable JavaScript and cookies\n3. Disable any ad blockers\n4. Try on desktop for best experience');
+          alert(
+            '⚠️ Mobile Payment Issue\n\nPlease try:\n1. Open in Chrome mobile browser\n2. Enable JavaScript and cookies\n3. Disable any ad blockers\n4. Try on desktop for best experience'
+          );
         }
-        
+
         throw razorpayError;
       }
-      
+
       console.log('=== RAZORPAY DEBUG END ===');
     } catch (error) {
       console.error('Payment initiation failed:', error);
@@ -308,10 +338,6 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
         },
       }}
     >
-       <Script
-          src="https://checkout.razorpay.com/v1/checkout.js"
-          strategy="beforeInteractive"
-        />
       <Box sx={{ p: 3, pb: 4 }}>
         {/* Handle bar */}
         <Box

@@ -1,7 +1,16 @@
 'use client';
 
+import {
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography,
+  Box,
+  Alert,
+} from '@mui/material';
 import React, { useState, useEffect } from 'react';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography, Box, Alert } from '@mui/material';
 
 interface RazorpayTestModalProps {
   open: boolean;
@@ -53,7 +62,7 @@ const RazorpayTestModal: React.FC<RazorpayTestModalProps> = ({ open, onClose }) 
       };
 
       const razorpayInstance = new window.Razorpay(testOptions);
-      
+
       if (razorpayInstance && typeof razorpayInstance.open === 'function') {
         setRazorpaySupport('✅ Razorpay instance created successfully');
       } else {
@@ -82,7 +91,7 @@ const RazorpayTestModal: React.FC<RazorpayTestModalProps> = ({ open, onClose }) 
         name: 'Browser Test',
         description: 'Testing browser compatibility',
         order_id: orderData.id,
-        handler: (response: any) => {
+        handler: (response: { razorpay_payment_id: string }) => {
           alert(`Success! Payment ID: ${response.razorpay_payment_id}`);
         },
         prefill: {
@@ -121,7 +130,8 @@ const RazorpayTestModal: React.FC<RazorpayTestModalProps> = ({ open, onClose }) 
             Browser: {browserInfo}
           </Typography>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            User Agent: {typeof window !== 'undefined' ? navigator.userAgent.substring(0, 80) + '...' : 'N/A'}
+            User Agent:{' '}
+            {typeof window !== 'undefined' ? navigator.userAgent.substring(0, 80) + '...' : 'N/A'}
           </Typography>
         </Box>
 
@@ -129,9 +139,7 @@ const RazorpayTestModal: React.FC<RazorpayTestModalProps> = ({ open, onClose }) 
           <Typography variant="h6" gutterBottom>
             Razorpay Support Test:
           </Typography>
-          <Typography variant="body2">
-            {razorpaySupport}
-          </Typography>
+          <Typography variant="body2">{razorpaySupport}</Typography>
         </Box>
 
         <Alert severity="info" sx={{ mb: 2 }}>
@@ -144,12 +152,7 @@ const RazorpayTestModal: React.FC<RazorpayTestModalProps> = ({ open, onClose }) 
           </ul>
         </Alert>
 
-        <Button 
-          variant="contained" 
-          onClick={testPayment} 
-          fullWidth
-          sx={{ mt: 2 }}
-        >
+        <Button variant="contained" onClick={testPayment} fullWidth sx={{ mt: 2 }}>
           Test Payment Modal
         </Button>
       </DialogContent>

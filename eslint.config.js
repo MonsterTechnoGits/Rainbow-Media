@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import nextPlugin from '@next/eslint-plugin-next';
 import importPlugin from 'eslint-plugin-import';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import prettier from 'eslint-plugin-prettier';
@@ -28,6 +29,7 @@ export default tseslint.config(
       },
     },
     plugins: {
+      '@next/next': nextPlugin,
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
       react,
@@ -37,8 +39,10 @@ export default tseslint.config(
       prettier,
     },
     rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs['core-web-vitals'].rules,
       ...reactHooks.configs.recommended.rules,
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      'react-refresh/only-export-components': 'off', // Allow contexts and providers
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
       'import/order': [
         'error',

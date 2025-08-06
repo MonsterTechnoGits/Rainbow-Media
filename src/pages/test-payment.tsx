@@ -1,8 +1,8 @@
 import { Button, Container, Typography, Box, Alert, CircularProgress } from '@mui/material';
 import { useState, useEffect } from 'react';
-import { RazorpayOptions } from '../types/razorpay';
+
 import RazorpayTestModal from '../components/RazorpayTestModal';
-import Script from 'next/script';
+import { RazorpayOptions } from '../types/razorpay';
 
 export default function TestPayment() {
   const [loading, setLoading] = useState(false);
@@ -96,7 +96,7 @@ export default function TestPayment() {
         name: 'RainbowMedia Test',
         description: 'Test Payment',
         order_id: orderData.id,
-        handler: function (response: any) {
+        handler: function (response: { razorpay_payment_id: string }) {
           setMessage(`✅ Payment Successful! Payment ID: ${response.razorpay_payment_id}`);
           setLoading(false);
         },
@@ -125,10 +125,6 @@ export default function TestPayment() {
 
   return (
     <Container maxWidth="sm" sx={{ mt: 4 }}>
-       <Script
-          src="https://checkout.razorpay.com/v1/checkout.js"
-          strategy="beforeInteractive"
-        />
       <Typography variant="h4" gutterBottom>
         Razorpay Payment Test
       </Typography>
@@ -153,12 +149,8 @@ export default function TestPayment() {
         <Button variant="contained" onClick={testRazorpayModal} disabled={loading}>
           {loading ? <CircularProgress size={20} /> : 'Test Payment Modal'}
         </Button>
-        
-        <Button 
-          variant="outlined" 
-          onClick={() => setShowTestModal(true)}
-          sx={{ ml: 1 }}
-        >
+
+        <Button variant="outlined" onClick={() => setShowTestModal(true)} sx={{ ml: 1 }}>
           Browser Test
         </Button>
       </Box>
@@ -178,11 +170,8 @@ export default function TestPayment() {
       <Typography variant="body2" color="text.secondary">
         Open browser console to see detailed logs.
       </Typography>
-      
-      <RazorpayTestModal 
-        open={showTestModal} 
-        onClose={() => setShowTestModal(false)} 
-      />
+
+      <RazorpayTestModal open={showTestModal} onClose={() => setShowTestModal(false)} />
     </Container>
   );
 }

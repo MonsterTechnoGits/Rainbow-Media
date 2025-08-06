@@ -7,24 +7,24 @@ const nextConfig = {
       transform: '@mui/icons-material/{{member}}',
     },
   },
-  
+
   // Enable static export for GitHub Pages
   output: 'export',
-  
+
   // Disable image optimization for static export
   images: {
     unoptimized: true,
   },
-  
+
   // Set base path for GitHub Pages
   basePath: process.env.NODE_ENV === 'production' ? '/Rainbow-Media' : '',
-  
+
   // Ensure assets work with base path
   assetPrefix: process.env.NODE_ENV === 'production' ? '/Rainbow-Media/' : '',
-  
+
   // Enable trailing slash for GitHub Pages
   trailingSlash: true,
-  
+
   async headers() {
     return [
       {
