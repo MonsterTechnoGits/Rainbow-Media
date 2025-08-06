@@ -89,26 +89,15 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
     try {
       console.log('Creating order for track:', track.title, 'Amount:', track.amount || 5);
 
-      const orderResponse = await fetch('/api/razorpay-order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: (track.amount || 5) * 100, // Convert to paise
-        }),
-      });
+      // For static export, create a client-side order without API route
+      const orderData = {
+        id: `order_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+        amount: (track.amount || 5) * 100, // Convert to paise
+        currency: 'INR',
+        receipt: `receipt_${track.id}_${Date.now()}`,
+      };
 
-      console.log('Order response status:', orderResponse.status);
-
-      if (!orderResponse.ok) {
-        const errorData = await orderResponse.json();
-        console.error('Order creation failed:', errorData);
-        throw new Error(errorData.error || 'Failed to create order');
-      }
-
-      const orderData = await orderResponse.json();
-      console.log('Order created successfully:', orderData);
+      console.log('Order created successfully (client-side):', orderData);
 
       if (!orderData.id) {
         throw new Error('Invalid order data received - missing order ID');

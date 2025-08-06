@@ -3,6 +3,7 @@
 import { Box, Container } from '@mui/material';
 import { useState, useMemo } from 'react';
 
+import ClientOnly from '@/components/ClientOnly';
 import CommentDrawer from '@/components/CommentDrawer';
 import ExpandedPlayer from '@/components/ExpandedPlayer';
 import MiniPlayer from '@/components/MiniPlayer';
@@ -74,11 +75,12 @@ export default function HomePageView() {
       </Container>
 
       {/* Music Player Components */}
-      <MiniPlayer />
-      <ExpandedPlayer />
-      <CommentDrawer />
-
-      <SettingsDrawer open={settingsOpen} onClose={handleSettingsClose} />
+      <ClientOnly>
+        <MiniPlayer />
+        <ExpandedPlayer />
+        <CommentDrawer />
+        <SettingsDrawer open={settingsOpen} onClose={handleSettingsClose} />
+      </ClientOnly>
     </>
   );
 }
