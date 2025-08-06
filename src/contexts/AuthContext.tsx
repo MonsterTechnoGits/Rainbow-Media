@@ -42,6 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const createUserDocument = async (firebaseUser: FirebaseUser): Promise<User> => {
+    if (!db) throw new Error('Firebase not initialized');
     const userRef = doc(db, 'users', firebaseUser.uid);
     const userSnap = await getDoc(userRef);
 
@@ -62,6 +63,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithGoogle = async () => {
+    if (!auth) throw new Error('Firebase not initialized');
+
     // On mobile devices, use redirect method directly for better reliability
     if (isMobile()) {
       console.log('Mobile device detected, using redirect method for better compatibility');
@@ -107,6 +110,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithGoogleRedirect = async () => {
+    if (!auth) throw new Error('Firebase not initialized');
+
     try {
       const provider = new GoogleAuthProvider();
 
@@ -127,6 +132,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    if (!auth) throw new Error('Firebase not initialized');
+
     try {
       await firebaseSignOut(auth);
       setUser(null);
@@ -142,7 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addPurchase = async (trackId: string) => {
-    if (!user) return;
+    if (!user || !db) return;
 
     const updatedUser = {
       ...user,
@@ -155,6 +162,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    // Skip authentication setup if Firebase is not available (during build)
+    if (!auth || !db) {
+      setLoading(false);
+      return;
+    }
+
     // Check for redirect result first
     getRedirectResult(auth)
       .then(async (result) => {

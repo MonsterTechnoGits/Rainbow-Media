@@ -154,13 +154,15 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
               };
 
               // Store purchase details in Firestore
-              const purchaseRef = doc(db, 'purchases', response.razorpay_payment_id);
-              await setDoc(purchaseRef, {
-                ...purchaseDetails,
-                userId: user.uid,
-                trackTitle: track.title,
-                trackArtist: track.artist,
-              });
+              if (db) {
+                const purchaseRef = doc(db, 'purchases', response.razorpay_payment_id);
+                await setDoc(purchaseRef, {
+                  ...purchaseDetails,
+                  userId: user.uid,
+                  trackTitle: track.title,
+                  trackArtist: track.artist,
+                });
+              }
 
               console.log('Purchase processed successfully:', purchaseDetails);
               alert(`Payment successful! Track "${track.title}" is now available.`);
