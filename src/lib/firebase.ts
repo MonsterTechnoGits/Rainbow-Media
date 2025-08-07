@@ -31,7 +31,7 @@ let db: Firestore | null = null;
 let auth: Auth | null = null;
 let storage: FirebaseStorage | null = null;
 
-if (firebaseConfig && (isClient || process.env.NODE_ENV === 'development')) {
+if (firebaseConfig) {
   try {
     app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     db = getFirestore(app);
