@@ -12,6 +12,8 @@ import MusicList from '@/components/MusicList';
 import SettingsDrawer from '@/components/SettingsDrawer';
 import Toolbar from '@/components/Toolbar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTrackLikesContext } from '@/contexts/TrackLikesContext';
+import { useApi } from '@/hooks/use-api-query-hook';
 import { useUrlTrackLoader } from '@/hooks/useUrlTrackLoader';
 import { trackApi } from '@/services/api';
 import { MusicTrack } from '@/types/music';
@@ -19,10 +21,9 @@ import { MusicTrack } from '@/types/music';
 export default function HomePageView() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [tracks, setTracks] = useState<MusicTrack[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { useApiQuery } = useApi();
+  const { initializeLikes } = useTrackLikesContext();
 
   // Handle URL-based track loading with authentication
   useUrlTrackLoader();
@@ -35,31 +36,35 @@ export default function HomePageView() {
     setSettingsOpen(false);
   };
 
-  // Fetch tracks from API
-  useEffect(() => {
-    const fetchTracks = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await trackApi.getTracks({
-          q: searchQuery.trim() || undefined,
-        });
-        setTracks(response.tracks);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch tracks');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTracks();
-  }, [searchQuery]);
+  // Fetch tracks using the custom hook with user ID for optimized like data
+  const {
+    data: tracksResponse,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useApiQuery({
+    queryKey: ['tracks', searchQuery, user?.uid],
+    queryFn: () =>
+      trackApi.getTracks({
+        q: searchQuery.trim() || undefined,
+        userId: user?.uid, // Pass userId for optimized like state
+      }),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: true,
+  });
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
   };
 
-  const filteredTracks = tracks;
+  const tracks = ((tracksResponse?.data as { tracks: MusicTrack[] })?.tracks || []) as MusicTrack[];
+
+  // Initialize like states when tracks are loaded
+  useEffect(() => {
+    if (tracks.length > 0) {
+      initializeLikes(tracks);
+    }
+  }, [tracks, initializeLikes]);
 
   // Show loading screen while authentication or tracks are loading
   if (authLoading || loading) {
@@ -74,9 +79,9 @@ export default function HomePageView() {
           Failed to load tracks
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          {error}
+          {error.message || 'An error occurred'}
         </Typography>
-        <Button variant="contained" onClick={() => window.location.reload()} sx={{ mt: 2 }}>
+        <Button variant="contained" onClick={() => refetch()} sx={{ mt: 2 }}>
           Retry
         </Button>
       </Box>
@@ -117,7 +122,7 @@ export default function HomePageView() {
             minHeight: 0,
           }}
         >
-          <MusicList tracks={filteredTracks} />
+          <MusicList tracks={tracks} />
         </Box>
       </Container>
 

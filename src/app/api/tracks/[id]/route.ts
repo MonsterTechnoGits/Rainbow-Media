@@ -1,36 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { mockMusicTracks } from '@/data/musicData';
+import { FirestoreTrackService } from '@/services/firestore-tracks';
 
 // GET /api/tracks/[id] - Get track by ID
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
 
-    const track = mockMusicTracks.find((t) => t.id === id);
+    const track = await FirestoreTrackService.getTrackById(id);
 
     if (!track) {
       return NextResponse.json({ error: 'Track not found' }, { status: 404 });
     }
 
-    // Add additional metadata for individual track requests
+    // For now, return simplified response without complex metadata
+    // TODO: Add related tracks and navigation metadata if needed
     const trackWithMetadata = {
       ...track,
       metadata: {
-        totalTracks: mockMusicTracks.length,
-        trackIndex: mockMusicTracks.findIndex((t) => t.id === id),
-        nextTrack:
-          mockMusicTracks.find(
-            (_, index) => index === mockMusicTracks.findIndex((t) => t.id === id) + 1
-          )?.id || null,
-        previousTrack:
-          mockMusicTracks.find(
-            (_, index) => index === mockMusicTracks.findIndex((t) => t.id === id) - 1
-          )?.id || null,
-        relatedTracks: mockMusicTracks
-          .filter((t) => t.id !== id && (t.artist === track.artist || t.genre === track.genre))
-          .slice(0, 5)
-          .map((t) => ({ id: t.id, title: t.title, artist: t.artist })),
+        totalTracks: 0, // Would need a count query
+        trackIndex: 0,
+        nextTrack: null,
+        previousTrack: null,
+        relatedTracks: [], // Would need a related tracks query
       },
     };
 

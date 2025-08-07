@@ -24,6 +24,7 @@ import PaymentDrawer from '@/components/PaymentDrawer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useComments } from '@/contexts/CommentContext';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
+import { useTrackLikesContext } from '@/contexts/TrackLikesContext';
 import { formatDuration } from '@/data/musicData';
 import { MusicTrack } from '@/types/music';
 
@@ -46,15 +47,9 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
     cancelAndCloseAll,
   } = useMusicPlayer();
   const { user, hasPurchased } = useAuth();
-  const { getTrackLike, getTrackComments, loadTrackData } = useComments();
+  const { openComments } = useComments();
+  const { toggleLike } = useTrackLikesContext();
   const theme = useTheme();
-
-  // Load track data (likes and comments) for all tracks when component mounts
-  React.useEffect(() => {
-    tracks.forEach((track) => {
-      loadTrackData(track.id);
-    });
-  }, [tracks, loadTrackData]);
 
   const handleTrackClick = (track: MusicTrack) => {
     // If it's the same track, just toggle play/pause
@@ -166,8 +161,9 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
               const isPlaying = isCurrentTrack && state.isPlaying;
               const isLoading = isCurrentTrack && state.isLoading;
               const isBuffering = isCurrentTrack && state.isBuffering;
-              const trackLike = getTrackLike(track.id);
-              const commentCount = getTrackComments(track.id).length;
+              // Use track data directly for performance optimization
+              const trackLike = { likeCount: track.likeCount, isLiked: track.isLiked || false };
+              const commentCount = track.commentCount;
 
               return (
                 <Paper
@@ -395,10 +391,12 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
                             >
                               <Paper
                                 elevation={0}
+                                onClick={() => toggleLike(track.id)}
                                 sx={{
                                   px: { xs: 0.5, sm: 0.75 },
                                   py: 0.25,
                                   borderRadius: 1.5,
+                                  cursor: 'pointer',
                                   bgcolor: trackLike.isLiked
                                     ? alpha(theme.palette.error.main, 0.1)
                                     : alpha(theme.palette.text.primary, 0.05),
@@ -407,6 +405,11 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
                                       ? alpha(theme.palette.error.main, 0.2)
                                       : alpha(theme.palette.divider, 0.1)
                                   }`,
+                                  '&:hover': {
+                                    bgcolor: trackLike.isLiked
+                                      ? alpha(theme.palette.error.main, 0.15)
+                                      : alpha(theme.palette.text.primary, 0.08),
+                                  },
                                 }}
                               >
                                 <Stack direction="row" alignItems="center" spacing={0.5}>
@@ -435,12 +438,22 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
 
                               <Paper
                                 elevation={0}
+                                onClick={() =>
+                                  openComments(track.id, {
+                                    likeCount: track.likeCount,
+                                    isLiked: track.isLiked,
+                                  })
+                                }
                                 sx={{
                                   px: { xs: 0.5, sm: 0.75 },
                                   py: 0.25,
                                   borderRadius: 1.5,
+                                  cursor: 'pointer',
                                   bgcolor: alpha(theme.palette.text.primary, 0.05),
                                   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                                  '&:hover': {
+                                    bgcolor: alpha(theme.palette.text.primary, 0.08),
+                                  },
                                 }}
                               >
                                 <Stack direction="row" alignItems="center" spacing={0.5}>

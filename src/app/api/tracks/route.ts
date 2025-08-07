@@ -1,45 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { mockMusicTracks } from '@/data/musicData';
+import { FirestoreTrackService } from '@/services/firestore-tracks';
 
-// GET /api/tracks - Get all tracks with optional search
+// GET /api/tracks - Get all tracks with optional search and user likes
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');
     const limit = searchParams.get('limit');
-    const offset = searchParams.get('offset');
+    const userId = searchParams.get('userId'); // For authenticated requests
 
-    let tracks = mockMusicTracks;
+    const limitNum = limit ? parseInt(limit) : 20;
 
-    // Filter by search query if provided
-    if (query) {
-      const lowercaseQuery = query.toLowerCase();
-      tracks = tracks.filter(
-        (track) =>
-          track.title.toLowerCase().includes(lowercaseQuery) ||
-          track.artist.toLowerCase().includes(lowercaseQuery) ||
-          track.album.toLowerCase().includes(lowercaseQuery) ||
-          track.genre.toLowerCase().includes(lowercaseQuery)
-      );
-    }
+    let result;
 
-    // Apply pagination if provided
-    const limitNum = limit ? parseInt(limit) : undefined;
-    const offsetNum = offset ? parseInt(offset) : 0;
-
-    if (limitNum) {
-      tracks = tracks.slice(offsetNum, offsetNum + limitNum);
+    if (userId) {
+      // Get tracks with user's like status (2 reads: tracks + user-likes)
+      result = await FirestoreTrackService.getTracksWithLikes(userId, {
+        limit: limitNum,
+        search: query || undefined,
+      });
+    } else {
+      // Get tracks without like status (1 read: tracks only)
+      result = await FirestoreTrackService.getTracks({
+        limit: limitNum,
+        search: query || undefined,
+      });
     }
 
     const response = {
-      tracks,
-      total: mockMusicTracks.length,
-      filtered: query ? tracks.length : mockMusicTracks.length,
+      tracks: result.tracks,
+      total: result.tracks.length, // This would need a separate count query for exact total
+      filtered: result.tracks.length,
       pagination: {
-        offset: offsetNum,
-        limit: limitNum || tracks.length,
-        hasMore: limitNum ? offsetNum + limitNum < mockMusicTracks.length : false,
+        offset: 0, // Using cursor-based pagination instead
+        limit: limitNum,
+        hasMore: result.hasMore,
       },
     };
 

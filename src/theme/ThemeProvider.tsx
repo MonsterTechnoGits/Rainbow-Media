@@ -68,6 +68,18 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   const theme = mode === 'light' ? lightTheme : darkTheme;
 
+  // Prevent hydration mismatch by only rendering after client hydration
+  if (!isHydrated) {
+    return (
+      <ThemeContext.Provider value={{ mode, toggleTheme }}>
+        <MuiThemeProvider theme={lightTheme}>
+          <CssBaseline />
+          {children}
+        </MuiThemeProvider>
+      </ThemeContext.Provider>
+    );
+  }
+
   return (
     <ThemeContext.Provider value={{ mode, toggleTheme }}>
       <MuiThemeProvider theme={theme}>

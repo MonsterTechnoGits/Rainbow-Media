@@ -32,6 +32,7 @@ import React from 'react';
 import Iconify from '@/components/iconify';
 import { useComments } from '@/contexts/CommentContext';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
+import { useTrackLikesContext } from '@/contexts/TrackLikesContext';
 import { formatDuration } from '@/data/musicData';
 
 const ExpandedPlayer: React.FC = () => {
@@ -47,14 +48,19 @@ const ExpandedPlayer: React.FC = () => {
     toggleShuffle,
     toggleRepeat,
   } = useMusicPlayer();
-  const { openComments, likeTrack, getTrackLike, getTrackComments } = useComments();
+  const { openComments } = useComments();
+  const { toggleLike, getTrackLike } = useTrackLikesContext();
   const theme = useTheme();
 
   const [tempCurrentTime, setTempCurrentTime] = React.useState<number | null>(null);
 
-  // Get track like status and comment count
-  const trackLike = state.currentTrack ? getTrackLike(state.currentTrack.id) : null;
-  const commentCount = state.currentTrack ? getTrackComments(state.currentTrack.id).length : 0;
+  // Get track like status and comment count from track data or context
+  const trackLike = state.currentTrack
+    ? state.currentTrack.likeCount !== undefined
+      ? { likeCount: state.currentTrack.likeCount, isLiked: state.currentTrack.isLiked || false }
+      : getTrackLike(state.currentTrack.id)
+    : null;
+  const commentCount = state.currentTrack?.commentCount || 0;
 
   if (!state.currentTrack) {
     return null;
@@ -85,13 +91,17 @@ const ExpandedPlayer: React.FC = () => {
 
   const handleLikeClick = () => {
     if (state.currentTrack) {
-      likeTrack(state.currentTrack.id);
+      toggleLike(state.currentTrack.id);
     }
   };
 
   const handleCommentClick = () => {
     if (state.currentTrack) {
-      openComments(state.currentTrack.id);
+      const likeData =
+        state.currentTrack.likeCount !== undefined
+          ? { likeCount: state.currentTrack.likeCount, isLiked: state.currentTrack.isLiked }
+          : undefined;
+      openComments(state.currentTrack.id, likeData);
     }
   };
 

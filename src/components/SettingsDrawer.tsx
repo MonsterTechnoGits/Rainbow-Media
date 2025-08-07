@@ -17,13 +17,16 @@ import {
   IconButton,
   Button,
   alpha,
+  ListItemButton,
 } from '@mui/material';
+import { useRouter } from 'next/navigation';
 import React from 'react';
 
 import AuthDrawer from '@/components/AuthDrawer';
 import Iconify from '@/components/iconify';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMobileViewport, getMobileDrawerStyles } from '@/hooks/useMobileViewport';
 import { useThemeMode } from '@/theme/ThemeProvider';
 
 interface SettingsDrawerProps {
@@ -33,9 +36,11 @@ interface SettingsDrawerProps {
 
 export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
   const theme = useTheme();
+  const router = useRouter();
   const { mode } = useThemeMode();
   const { user, signOut, loading } = useAuth();
   const [showAuthDrawer, setShowAuthDrawer] = React.useState(false);
+  const { isMobile } = useMobileViewport();
 
   const handleSignOut = async () => {
     try {
@@ -54,6 +59,11 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
     setShowAuthDrawer(false);
   };
 
+  const handleAdminClick = () => {
+    router.push('/admin');
+    onClose();
+  };
+
   return (
     <Drawer
       anchor="bottom"
@@ -64,10 +74,12 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
           sx: {
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
-            height: '100vh',
-            maxHeight: '100vh',
             bgcolor: theme.palette.background.paper,
+            ...getMobileDrawerStyles(isMobile, 90, 70),
           },
+        },
+        backdrop: {
+          sx: {},
         },
       }}
     >
@@ -286,6 +298,39 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                     }}
                   />
                 </ListItem>
+
+                {/* Admin Option - Only shown to admin users */}
+                {user.isAdmin && (
+                  <>
+                    <Divider variant="inset" sx={{ ml: 7 }} />
+                    <ListItemButton sx={{ py: 2 }} onClick={handleAdminClick}>
+                      <Stack direction="row" alignItems="center" spacing={2} sx={{ mr: 2 }}>
+                        <Box
+                          sx={{
+                            p: 1,
+                            borderRadius: 1.5,
+                            bgcolor: alpha(theme.palette.error.main, 0.1),
+                          }}
+                        >
+                          <Iconify
+                            icon="material-symbols:admin-panel-settings"
+                            width={20}
+                            height={20}
+                            sx={{ color: theme.palette.error.main }}
+                          />
+                        </Box>
+                      </Stack>
+                      <ListItemText
+                        primary="Admin Dashboard"
+                        secondary="Manage platform settings"
+                        slotProps={{
+                          primary: { style: { fontWeight: 600 } },
+                        }}
+                      />
+                      <Iconify icon="material-symbols:chevron-right" width={20} height={20} />
+                    </ListItemButton>
+                  </>
+                )}
               </List>
             </Paper>
           </Box>

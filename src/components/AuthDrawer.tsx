@@ -17,6 +17,7 @@ import {
 import React from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useMobileViewport, getMobileDrawerStyles } from '@/hooks/useMobileViewport';
 
 interface AuthDrawerProps {
   open: boolean;
@@ -35,14 +36,7 @@ const AuthDrawer: React.FC<AuthDrawerProps> = ({
 }) => {
   const { signInWithGoogle, loading } = useAuth();
   const theme = useTheme();
-
-  const isMobile = () => {
-    if (typeof window === 'undefined') return false;
-    return (
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-      window.innerWidth <= 768
-    );
-  };
+  const { isMobile } = useMobileViewport();
 
   const handleGoogleSignIn = async () => {
     try {
@@ -78,9 +72,10 @@ const AuthDrawer: React.FC<AuthDrawerProps> = ({
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
           bgcolor: theme.palette.background.paper,
-          maxHeight: '90vh',
+          ...getMobileDrawerStyles(isMobile, 80, 60),
         },
       }}
+      slotProps={{}}
     >
       <Box sx={{ p: 3, pb: 4 }}>
         {/* Handle bar */}
@@ -189,13 +184,13 @@ const AuthDrawer: React.FC<AuthDrawerProps> = ({
           >
             {loading
               ? 'Signing In...'
-              : isMobile()
+              : isMobile
                 ? 'Sign In with Google (Redirect)'
                 : 'Sign In with Google'}
           </Button>
 
           {/* Only show alternative method on desktop */}
-          {!isMobile() && (
+          {!isMobile && (
             <Button
               fullWidth
               variant="outlined"
@@ -228,7 +223,7 @@ const AuthDrawer: React.FC<AuthDrawerProps> = ({
           textAlign="center"
           sx={{ mt: 2, display: 'block', lineHeight: 1.4 }}
         >
-          {isMobile()
+          {isMobile
             ? 'You will be redirected to Google for secure sign-in, then back to the app. Your data is protected.'
             : 'By signing in, you agree to our Terms of Service and Privacy Policy. Your data is secure and protected.'}
         </Typography>

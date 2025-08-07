@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "npm run pre-check && next build",
-    "export": "next build",
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
@@ -19,13 +18,15 @@
     "@iconify/react": "^6.0.0",
     "@mui/icons-material": "^7.3.0",
     "@mui/material": "^7.3.0",
+    "@tanstack/react-query": "^5.84.1",
     "firebase": "^12.0.0",
     "next": "^15.4.5",
     "razorpay": "^2.9.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-razorpay": "^3.0.1",
-    "tailwindcss": "^4.1.11"
+    "tailwindcss": "^4.1.11",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

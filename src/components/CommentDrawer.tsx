@@ -24,13 +24,15 @@ import React, { useState } from 'react';
 import Iconify from '@/components/iconify';
 import { useComments } from '@/contexts/CommentContext';
 import { formatTimeAgo } from '@/data/commentData';
+import { useMobileViewport, getMobileDrawerStyles } from '@/hooks/useMobileViewport';
 
 const CommentDrawer: React.FC = () => {
-  const { state, closeComments, addComment, likeComment, getTrackComments } = useComments();
+  const { state, closeComments, addComment, likeComment } = useComments();
   const theme = useTheme();
   const [commentText, setCommentText] = useState('');
+  const { isMobile } = useMobileViewport();
 
-  const currentComments = state.currentTrackId ? getTrackComments(state.currentTrackId) : [];
+  const currentComments = state.currentTrackId ? state.comments[state.currentTrackId] || [] : [];
 
   const handleClose = () => {
     closeComments();
@@ -58,13 +60,15 @@ const CommentDrawer: React.FC = () => {
       slotProps={{
         paper: {
           sx: {
-            height: '80vh',
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
-            maxHeight: '80vh',
             bgcolor: theme.palette.background.paper,
             backgroundImage: 'none',
+            ...getMobileDrawerStyles(isMobile, 85, 50),
           },
+        },
+        backdrop: {
+          sx: {},
         },
       }}
     >

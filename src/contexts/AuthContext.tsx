@@ -11,7 +11,7 @@ import {
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 import { auth } from '@/lib/firebase';
-import { userService, purchaseService } from '@/services/firestore';
+import { userService, purchaseService } from '@/services/firestore-user';
 import { User } from '@/types/music';
 
 interface AuthContextType {
@@ -39,6 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         displayName: firebaseUser.displayName || '',
         photoURL: firebaseUser.photoURL || '',
         purchases: [],
+        isAdmin: false, // Default to false, can be manually updated in Firestore
       };
 
       return await userService.createUser(userData);

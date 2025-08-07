@@ -12,7 +12,7 @@ A modern music streaming platform built with Next.js, Firebase, and Razorpay pay
 
 ## Live Demo
 
-🚀 **[View Live Demo](https://yourusername.github.io/Rainbow-Media/)**
+🚀 **[View Live Demo](https://rainbow-media.vercel.app/)**
 
 ## Quick Setup
 
@@ -58,11 +58,13 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Deployment
 
-### GitHub Pages (Automatic)
+### Vercel (Recommended)
 
 1. **Fork this repository**
-2. **Enable GitHub Pages** in repository settings
-3. **Add secrets** in GitHub repository settings (Settings → Secrets and variables → Actions):
+2. **Connect to Vercel**:
+   - Go to [vercel.com](https://vercel.com)
+   - Import your GitHub repository
+3. **Add environment variables** in Vercel dashboard:
 
    ```
    NEXT_PUBLIC_FIREBASE_API_KEY
@@ -75,16 +77,16 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    RAZORPAY_KEY_SECRET
    ```
 
-4. **Push to main branch** - GitHub Actions will automatically deploy!
+4. **Deploy** - Vercel will automatically deploy on every push!
 
-### Manual Deployment
+### Other Platforms
 
 ```bash
 npm run build
-npm run export
+npm start
 ```
 
-Deploy the `out` folder to any static hosting service.
+Deploy to any Node.js hosting service (Netlify, Railway, Render, etc.).
 
 ## Configuration
 
@@ -129,7 +131,7 @@ src/
 ```bash
 npm run dev          # Start development server
 npm run build        # Build for production
-npm run export       # Export static files
+npm run start        # Start production server
 npm run lint         # Run ESLint
 npm run prettier     # Format code
 ```

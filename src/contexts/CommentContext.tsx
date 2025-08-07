@@ -3,19 +3,23 @@
 import React, { createContext, useContext, useReducer, useCallback } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useApi } from '@/hooks/use-api-query-hook';
 import { trackApi } from '@/services/api';
 import { Comment, CommentState, TrackLike } from '@/types/comment';
 
 interface CommentContextType {
   state: CommentState;
-  openComments: (trackId: string) => void;
+  openComments: (trackId: string, trackData?: { likeCount: number; isLiked?: boolean }) => void;
   closeComments: () => void;
   addComment: (trackId: string, text: string) => Promise<void>;
   likeComment: (commentId: string, trackId: string) => void;
   likeTrack: (trackId: string) => Promise<void>;
   getTrackComments: (trackId: string) => Comment[];
   getTrackLike: (trackId: string) => TrackLike;
-  loadTrackData: (trackId: string) => Promise<void>;
+  loadTrackData: (
+    trackId: string,
+    trackData?: { likeCount: number; isLiked?: boolean }
+  ) => Promise<void>;
 }
 
 type CommentAction =
@@ -131,44 +135,64 @@ const CommentContext = createContext<CommentContextType | undefined>(undefined);
 export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(commentReducer, initialState);
   const { user } = useAuth();
+  const { useApiMutation } = useApi();
 
   const loadTrackData = useCallback(
-    async (trackId: string) => {
+    async (trackId: string, trackData?: { likeCount: number; isLiked?: boolean }) => {
       try {
-        // Load comments and likes in parallel
-        const [commentsResponse, likesResponse] = await Promise.all([
-          trackApi.getTrackComments(trackId),
-          trackApi.getTrackLikes(trackId, user?.uid),
-        ]);
-
-        // Transform API comments to our format
-        const comments: Comment[] = commentsResponse.comments.map((apiComment) => ({
-          id: apiComment.id,
-          trackId,
-          userId: apiComment.userId,
-          username: apiComment.userName,
-          userAvatar: apiComment.userAvatar,
-          text: apiComment.content,
-          timestamp: apiComment.timestamp,
-          likes: apiComment.likes,
-          isLiked: false, // We don't track individual comment likes for now
-        }));
-
-        const trackLike: TrackLike = {
-          trackId,
-          likeCount: likesResponse.likeCount,
-          isLiked: likesResponse.isLiked,
-        };
+        // Load comments from Firestore API
+        let comments: Comment[] = [];
+        try {
+          const commentsResponse = await trackApi.getTrackComments(trackId);
+          comments = commentsResponse.data.comments.map((apiComment) => ({
+            id: apiComment.id,
+            trackId,
+            userId: apiComment.userId,
+            username: apiComment.userName,
+            userAvatar: apiComment.userAvatar,
+            text: apiComment.content,
+            timestamp: apiComment.timestamp,
+            likes: apiComment.likes,
+            isLiked: false, // We don't track individual comment likes for now
+          }));
+        } catch (error) {
+          console.error('Failed to load comments:', error);
+          comments = []; // Fallback to empty comments
+        }
 
         dispatch({ type: 'SET_COMMENTS', payload: { trackId, comments } });
-        dispatch({ type: 'SET_TRACK_LIKE', payload: { trackId, like: trackLike } });
+
+        // Use provided track data for likes if available, otherwise fetch from API
+        if (trackData) {
+          const trackLike: TrackLike = {
+            trackId,
+            likeCount: trackData.likeCount,
+            isLiked: trackData.isLiked || false,
+          };
+          dispatch({ type: 'SET_TRACK_LIKE', payload: { trackId, like: trackLike } });
+        } else {
+          // For now, set default like data to avoid API calls
+          const trackLike: TrackLike = {
+            trackId,
+            likeCount: 0,
+            isLiked: false,
+          };
+          dispatch({ type: 'SET_TRACK_LIKE', payload: { trackId, like: trackLike } });
+        }
       } catch (error) {
         console.error('Failed to load track data:', error);
         // Set empty defaults on error
         dispatch({ type: 'SET_COMMENTS', payload: { trackId, comments: [] } });
         dispatch({
           type: 'SET_TRACK_LIKE',
-          payload: { trackId, like: { trackId, likeCount: 0, isLiked: false } },
+          payload: {
+            trackId,
+            like: {
+              trackId,
+              likeCount: trackData?.likeCount || 0,
+              isLiked: trackData?.isLiked || false,
+            },
+          },
         });
       }
     },
@@ -176,10 +200,10 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 
   const openComments = useCallback(
-    (trackId: string) => {
+    (trackId: string, trackData?: { likeCount: number; isLiked?: boolean }) => {
       dispatch({ type: 'OPEN_COMMENTS', payload: { trackId } });
-      // Load fresh data when opening comments
-      loadTrackData(trackId);
+      // Only load comments, use provided track data for likes if available
+      loadTrackData(trackId, trackData);
     },
     [loadTrackData]
   );
@@ -188,28 +212,60 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     dispatch({ type: 'CLOSE_COMMENTS' });
   }, []);
 
+  const addCommentMutation = useApiMutation({
+    mutationFn: (variables: unknown) => {
+      const { trackId, comment } = variables as {
+        trackId: string;
+        comment: {
+          userId: string;
+          userName: string;
+          userAvatar?: string;
+          content: string;
+        };
+      };
+      return trackApi.addTrackComment(trackId, comment);
+    },
+  });
+
   const addComment = useCallback(
     async (trackId: string, text: string) => {
       if (!user) return;
 
       try {
-        const response = await trackApi.addTrackComment(trackId, {
+        const commentData = {
           userId: user.uid,
           userName: user.displayName || 'Anonymous User',
           userAvatar: user.photoURL,
           content: text,
-        });
+        };
+
+        const response = await addCommentMutation.mutateAsync({ trackId, comment: commentData });
 
         // Transform API comment to our format
+        const responseData = response.data as {
+          success: boolean;
+          comment: {
+            id: string;
+            userId: string;
+            userName: string;
+            userAvatar: string;
+            content: string;
+            timestamp: number;
+            likes: number;
+            replies: unknown[];
+          };
+          totalComments: number;
+        };
+
         const newComment: Comment = {
-          id: response.comment.id,
+          id: responseData.comment.id,
           trackId,
-          userId: response.comment.userId,
-          username: response.comment.userName,
-          userAvatar: response.comment.userAvatar,
-          text: response.comment.content,
-          timestamp: response.comment.timestamp,
-          likes: response.comment.likes,
+          userId: responseData.comment.userId,
+          username: responseData.comment.userName,
+          userAvatar: responseData.comment.userAvatar,
+          text: responseData.comment.content,
+          timestamp: responseData.comment.timestamp,
+          likes: responseData.comment.likes,
           isLiked: false,
         };
 
@@ -218,24 +274,37 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.error('Failed to add comment:', error);
       }
     },
-    [user]
+    [user, addCommentMutation]
   );
 
   const likeComment = useCallback((commentId: string, trackId: string) => {
     dispatch({ type: 'LIKE_COMMENT', payload: { commentId, trackId } });
   }, []);
 
+  const likeTrackMutation = useApiMutation({
+    mutationFn: (variables: unknown) => {
+      const { trackId, userId } = variables as { trackId: string; userId: string };
+      return trackApi.toggleTrackLike(trackId, userId);
+    },
+  });
+
   const likeTrack = useCallback(
     async (trackId: string) => {
       if (!user) return;
 
       try {
-        const response = await trackApi.toggleTrackLike(trackId, user.uid);
+        const response = await likeTrackMutation.mutateAsync({ trackId, userId: user.uid });
+
+        const responseData = response.data as {
+          trackId: string;
+          likeCount: number;
+          isLiked: boolean;
+        };
 
         const trackLike: TrackLike = {
           trackId,
-          likeCount: response.likeCount,
-          isLiked: response.isLiked,
+          likeCount: responseData.likeCount,
+          isLiked: responseData.isLiked,
         };
 
         dispatch({ type: 'SET_TRACK_LIKE', payload: { trackId, like: trackLike } });
@@ -245,7 +314,7 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
         dispatch({ type: 'LIKE_TRACK', payload: { trackId } });
       }
     },
-    [user]
+    [user, likeTrackMutation]
   );
 
   const getTrackComments = useCallback(

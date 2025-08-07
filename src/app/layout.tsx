@@ -1,8 +1,12 @@
 import { Suspense } from 'react';
 
+import QueryProvider from '@/components/QueryProvider';
+
 import { AuthProvider } from '../contexts/AuthContext';
 import { CommentProvider } from '../contexts/CommentContext';
 import { MusicPlayerProvider } from '../contexts/MusicPlayerContext';
+import { ToastProvider } from '../contexts/ToastContext';
+import { TrackLikesProvider } from '../contexts/TrackLikesContext';
 import { ThemeProvider } from '../theme/ThemeProvider';
 
 import type { Metadata } from 'next';
@@ -21,11 +25,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Suspense>
           <ThemeProvider>
-            <AuthProvider>
-              <CommentProvider>
-                <MusicPlayerProvider>{children}</MusicPlayerProvider>
-              </CommentProvider>
-            </AuthProvider>
+            <QueryProvider>
+              <AuthProvider>
+                <ToastProvider>
+                  <TrackLikesProvider>
+                    <CommentProvider>
+                      <MusicPlayerProvider>{children}</MusicPlayerProvider>
+                    </CommentProvider>
+                  </TrackLikesProvider>
+                </ToastProvider>
+              </AuthProvider>
+            </QueryProvider>
           </ThemeProvider>
         </Suspense>
       </body>

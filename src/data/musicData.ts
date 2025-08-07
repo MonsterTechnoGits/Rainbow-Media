@@ -15,6 +15,8 @@ export const mockMusicTracks: MusicTrack[] = [
     paid: true,
     amount: 5,
     currency: 'INR',
+    likeCount: 1250,
+    commentCount: 85,
   },
   {
     id: '2',
@@ -28,6 +30,8 @@ export const mockMusicTracks: MusicTrack[] = [
     paid: false,
     amount: 5,
     currency: 'INR',
+    likeCount: 2340,
+    commentCount: 152,
   },
   {
     id: '3',
@@ -42,6 +46,8 @@ export const mockMusicTracks: MusicTrack[] = [
     paid: true,
     amount: 5,
     currency: 'INR',
+    likeCount: 892,
+    commentCount: 67,
   },
   {
     id: '4',
@@ -55,6 +61,8 @@ export const mockMusicTracks: MusicTrack[] = [
     paid: false,
     amount: 5,
     currency: 'INR',
+    likeCount: 1876,
+    commentCount: 203,
   },
   {
     id: '5',
@@ -69,6 +77,8 @@ export const mockMusicTracks: MusicTrack[] = [
     paid: true,
     amount: 5,
     currency: 'INR',
+    likeCount: 3456,
+    commentCount: 278,
   },
   {
     id: '6',
@@ -83,6 +93,8 @@ export const mockMusicTracks: MusicTrack[] = [
     paid: false,
     amount: 5,
     currency: 'INR',
+    likeCount: 1432,
+    commentCount: 98,
   },
   {
     id: '7',
@@ -96,6 +108,8 @@ export const mockMusicTracks: MusicTrack[] = [
     paid: true,
     amount: 5,
     currency: 'INR',
+    likeCount: 1567,
+    commentCount: 134,
   },
   {
     id: '8',
@@ -110,6 +124,8 @@ export const mockMusicTracks: MusicTrack[] = [
     paid: false,
     amount: 5,
     currency: 'INR',
+    likeCount: 2109,
+    commentCount: 189,
   },
 ];
 

@@ -1,6 +1,6 @@
 # 🚀 RainbowMedia - Deployment Guide
 
-## Quick Setup for GitHub Pages
+## Quick Setup for Vercel
 
 ### 1. Repository Setup
 
@@ -10,14 +10,15 @@
    git push -u origin main
    ```
 
-2. **Enable GitHub Pages**:
-   - Go to repository **Settings**
-   - Scroll to **Pages** section
-   - Source: **GitHub Actions**
+2. **Connect to Vercel**:
+   - Go to [vercel.com](https://vercel.com)
+   - Sign up/login with GitHub
+   - Click **"New Project"**
+   - Import your Rainbow-Media repository
 
 ### 2. Environment Variables Setup
 
-Add these secrets in **GitHub Settings → Secrets and variables → Actions**:
+Add these environment variables in **Vercel Dashboard → Project → Settings → Environment Variables**:
 
 ```
 NEXT_PUBLIC_FIREBASE_API_KEY
@@ -36,11 +37,11 @@ RAZORPAY_KEY_SECRET
 2. **Enable Authentication**:
    - Go to **Authentication → Sign-in method**
    - Enable **Google** provider
-   - Add your domain to authorized domains
+   - Add your Vercel domain to authorized domains (e.g., `your-app.vercel.app`)
 3. **Create Firestore Database**:
    - Go to **Firestore Database**
    - Create in production mode
-   - Upload `firestore.rules` for security
+   - Set up security rules
 
 ### 4. Razorpay Configuration
 
@@ -50,26 +51,51 @@ RAZORPAY_KEY_SECRET
    - Use **test keys** for development
    - Use **live keys** for production
 3. **Configure Webhooks** (optional):
-   - Add your domain for payment confirmations
+   - Add your Vercel domain for payment confirmations
 
-### 5. Update Repository Name
+### 5. Deploy
 
-In `next.config.js`, update the basePath:
+1. **Automatic Deployment**: 
+   - Vercel automatically deploys on every push to main branch
+   - No additional configuration needed!
 
-```javascript
-basePath: process.env.NODE_ENV === 'production' ? '/YourRepoName' : '',
-assetPrefix: process.env.NODE_ENV === 'production' ? '/YourRepoName/' : '',
-```
+2. **Manual Deployment**:
+   ```bash
+   # Install Vercel CLI
+   npm i -g vercel
+   
+   # Deploy
+   vercel --prod
+   ```
 
-### 6. Deploy
+Your site will be available at: `https://your-project-name.vercel.app/`
 
-Push any changes to main branch - GitHub Actions will automatically deploy!
+## Alternative Deployment Options
+
+### Netlify
+
+1. Connect your GitHub repository to Netlify
+2. Add environment variables in Netlify dashboard
+3. Build command: `npm run build`
+4. Publish directory: `.next`
+
+### Railway
+
+1. Connect to Railway using GitHub
+2. Add environment variables
+3. Railway will auto-deploy on push
+
+### Self-hosted
 
 ```bash
-git push origin main
+# Build the application
+npm run build
+
+# Start production server
+npm start
 ```
 
-Your site will be available at: `https://yourusername.github.io/Rainbow-Media/`
+Deploy to any VPS or cloud provider that supports Node.js.
 
 ## Local Development
 
@@ -77,7 +103,7 @@ Your site will be available at: `https://yourusername.github.io/Rainbow-Media/`
    ```bash
    git clone https://github.com/yourusername/Rainbow-Media.git
    cd Rainbow-Media
-   ./setup.sh
+   npm install
    ```
 
 2. **Configure Environment**:
@@ -96,38 +122,55 @@ Your site will be available at: `https://yourusername.github.io/Rainbow-Media/`
 ### Payment Issues
 - Use **test keys** in development
 - Check browser console for errors
-- Try the test page: `/test-payment`
-- Ensure Razorpay domain is whitelisted
+- Ensure Razorpay domain is whitelisted for your Vercel domain
 
 ### Authentication Issues
 - Verify Firebase configuration
-- Check authorized domains in Firebase console
+- Check authorized domains in Firebase console (add your Vercel domain)
 - Ensure CORS settings allow your domain
 
 ### Deployment Issues
-- Verify all GitHub secrets are set
-- Check Actions tab for build logs
-- Ensure repository name matches basePath in config
+- Verify all environment variables are set in Vercel
+- Check deployment logs in Vercel dashboard
+- Ensure Firebase and Razorpay are configured for your domain
+
+### Domain Configuration
+- Add your custom domain in Vercel project settings
+- Update Firebase authorized domains
+- Update Razorpay webhook URLs if using custom domain
 
 ## Production Checklist
 
 - [ ] Firebase project configured
 - [ ] Razorpay account set up
-- [ ] All environment variables added to GitHub
-- [ ] Repository name updated in next.config.js
-- [ ] GitHub Pages enabled
-- [ ] Domain configured (if custom domain)
-- [ ] Security rules updated
+- [ ] All environment variables added to Vercel
+- [ ] Vercel project connected to GitHub
+- [ ] Firebase authorized domains updated
 - [ ] Payment testing completed
+- [ ] Custom domain configured (if applicable)
+- [ ] Security rules updated
+
+## Environment Variables Reference
+
+| Variable | Description | Where to get |
+|----------|-------------|--------------|
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase API key | Firebase Console → Project Settings |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase auth domain | Firebase Console → Project Settings |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase project ID | Firebase Console → Project Settings |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Firebase storage bucket | Firebase Console → Project Settings |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging sender ID | Firebase Console → Project Settings |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase app ID | Firebase Console → Project Settings |
+| `NEXT_PUBLIC_RAZORPAY_KEY_ID` | Razorpay public key | Razorpay Dashboard → Settings → API Keys |
+| `RAZORPAY_KEY_SECRET` | Razorpay secret key | Razorpay Dashboard → Settings → API Keys |
 
 ## Support
 
 For issues or questions:
-1. Check the [Issues](https://github.com/yourusername/Rainbow-Media/issues) tab
-2. Review the README.md
-3. Check GitHub Actions logs
-4. Verify all environment variables
+1. Check Vercel deployment logs
+2. Verify all environment variables are set
+3. Check Firebase and Razorpay configurations
+4. Review browser console for errors
 
 ---
 
-🎵 **Happy Music Streaming!** 🎵
+🎵 **Happy Music Streaming on Vercel!** 🎵

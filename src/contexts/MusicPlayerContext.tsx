@@ -192,6 +192,28 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
+  // Helper function to load track data
+  const loadTrackData = useCallback(async (trackId: string) => {
+    try {
+      const response = await trackApi.getTrack(trackId);
+      return response.data;
+    } catch (error) {
+      console.error('Error loading track:', error);
+      return null;
+    }
+  }, []);
+
+  // Helper function to load tracks queue
+  const loadTracksQueue = useCallback(async () => {
+    try {
+      const tracksResponse = await trackApi.getTracks();
+      return tracksResponse.data.tracks;
+    } catch (error) {
+      console.error('Failed to fetch tracks for queue:', error);
+      return [];
+    }
+  }, []);
+
   const playTrackById = async (
     trackId: string,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -204,8 +226,8 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
       if (!track) {
         // If not found in queue, fetch from API
-        const response = await trackApi.getTrack(trackId);
-        track = response;
+        const fetchedTrack = await loadTrackData(trackId);
+        track = fetchedTrack as MusicTrack | undefined;
       }
 
       if (track) {
@@ -230,11 +252,8 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         // If we don't have a full queue, fetch tracks from API
         let queue = state.queue;
         if (queue.length === 0) {
-          try {
-            const tracksResponse = await trackApi.getTracks();
-            queue = tracksResponse.tracks;
-          } catch (error) {
-            console.error('Failed to fetch tracks for queue:', error);
+          queue = await loadTracksQueue();
+          if (queue.length === 0) {
             queue = [track]; // Use single track as queue
           }
         }

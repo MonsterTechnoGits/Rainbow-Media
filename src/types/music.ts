@@ -10,6 +10,10 @@ export interface MusicTrack {
   paid: boolean; // true if the track is paid
   amount?: number; // price in the specified currency
   currency?: string; // currency code, e.g., 'INR'
+  // Performance optimization: include counts directly in track data
+  likeCount: number;
+  commentCount: number;
+  isLiked?: boolean; // Only set when user is authenticated
 }
 
 export interface PlayerState {
@@ -34,6 +38,7 @@ export interface User {
   displayName?: string;
   photoURL?: string;
   purchases: string[]; // Array of purchased track IDs
+  isAdmin?: boolean; // Admin flag
 }
 
 export interface PurchaseDetails {

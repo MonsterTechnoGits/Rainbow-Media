@@ -14,13 +14,14 @@ import {
   useTheme,
   alpha,
   Chip,
-  Snackbar,
-  Alert,
 } from '@mui/material';
-import React, { useState } from 'react';
+import React from 'react';
 import { RazorpayOrderOptions, useRazorpay } from 'react-razorpay';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
+import { useApi } from '@/hooks/use-api-query-hook';
+import { paymentApi } from '@/services/api';
 import { MusicTrack } from '@/types/music';
 
 interface PaymentDrawerProps {
@@ -37,92 +38,68 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
   onPaymentSuccess,
 }) => {
   const theme = useTheme();
-  const [loading, setLoading] = useState(false);
   const { Razorpay } = useRazorpay();
   const { user, addPurchase } = useAuth();
+  const { showError } = useToast();
+  const { useApiMutation } = useApi();
 
-  // Toast state management
-  const [toast, setToast] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error' | 'warning' | 'info';
-  }>({
-    open: false,
-    message: '',
-    severity: 'info',
+  const createOrderMutation = useApiMutation({
+    mutationFn: (variables: unknown) => paymentApi.createOrder(variables as number),
   });
-
-  const showToast = (message: string, severity: 'success' | 'error' | 'warning' | 'info') => {
-    setToast({ open: true, message, severity });
-  };
-
-  const closeToast = () => {
-    setToast((prev) => ({ ...prev, open: false }));
-  };
 
   const handlePayment = async () => {
     if (!user) {
-      showToast('Please sign in to make a purchase', 'warning');
+      showError('Please sign in to make a purchase');
       return;
     }
 
-    setLoading(true);
-    const res = await fetch('/api/razorpay/order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: track?.amount || 5 }), // amount in INR
-    });
+    try {
+      const orderResponse = await createOrderMutation.mutateAsync(track?.amount || 5);
+      const order = orderResponse.data;
 
-    const order = await res.json();
-    setLoading(false);
+      if (!window.Razorpay) {
+        showError(
+          'Payment gateway is not supported in this browser. Please try a different browser or device.'
+        );
+        return;
+      }
 
-    if (!window.Razorpay) {
-      showToast(
-        'Payment gateway is not supported in this browser. Please try a different browser or device.',
-        'error'
-      );
-      return;
-    }
-
-    const options: RazorpayOrderOptions = {
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '',
-      amount: order.amount,
-      currency: order.currency,
-      name: 'Rainbow Media',
-      description: `Purchase: ${track?.title} by ${track?.artist}`,
-      order_id: order.id, // Generate order_id on server
-      handler: async (response) => {
-        try {
-          // Add purchase to user's account
-          if (track?.id) {
-            await addPurchase(track.id);
+      const options: RazorpayOrderOptions = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '',
+        amount: (order as { id: string; amount: number; currency: string }).amount,
+        currency: (order as { id: string; amount: number; currency: string }).currency as 'INR',
+        name: 'Rainbow Media',
+        description: `Purchase: ${track?.title} by ${track?.artist}`,
+        order_id: (order as { id: string; amount: number; currency: string }).id, // Generate order_id on server
+        handler: async (response) => {
+          try {
+            // Add purchase to user's account
+            if (track?.id) {
+              await addPurchase(track.id);
+            }
+            console.log('Payment successful:', response);
+            onPaymentSuccess();
+            onClose();
+          } catch (error) {
+            console.error('Error processing payment:', error);
+            showError('Payment successful but failed to update account. Please contact support.');
           }
-          console.log('Payment successful:', response);
-          onPaymentSuccess();
-          onClose();
-        } catch (error) {
-          console.error('Error processing payment:', error);
-          showToast(
-            'Payment successful but failed to update account. Please contact support.',
-            'error'
-          );
-        }
-      },
-      prefill: {
-        name: user?.displayName || 'Guest User',
-        email: user?.email || '',
-        contact: '',
-      },
-      theme: {
-        color: '#F37254',
-      },
-    };
+        },
+        prefill: {
+          name: user?.displayName || 'Guest User',
+          email: user?.email || '',
+          contact: '',
+        },
+        theme: {
+          color: '#F37254',
+        },
+      };
 
-    const razorpayInstance = new Razorpay(options);
-    razorpayInstance.open();
-
-    // const razor = new window.Razorpay(options);
-    // razor.open();
+      const razorpayInstance = new Razorpay(options);
+      razorpayInstance.open();
+    } catch (error) {
+      console.error('Error creating payment order:', error);
+    }
   };
 
   if (!track) return null;
@@ -137,9 +114,15 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
           sx: {
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
+            borderBottomLeftRadius: 0,
+            borderBottomRightRadius: 0,
             bgcolor: theme.palette.background.paper,
-            maxHeight: '90vh',
+            height: 'auto',
+            maxHeight: '75vh',
           },
+        },
+        backdrop: {
+          sx: {},
         },
       }}
     >
@@ -257,10 +240,14 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
             variant="contained"
             size="large"
             startIcon={
-              loading ? <CircularProgress size={20} sx={{ color: 'inherit' }} /> : <Payment />
+              createOrderMutation.isPending ? (
+                <CircularProgress size={20} sx={{ color: 'inherit' }} />
+              ) : (
+                <Payment />
+              )
             }
             onClick={handlePayment}
-            disabled={loading}
+            disabled={createOrderMutation.isPending}
             sx={{
               py: 1.5,
               borderRadius: 3,
@@ -272,7 +259,7 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
               },
             }}
           >
-            {loading ? 'Processing...' : `Pay ₹${track.amount || 5} Now`}
+            {createOrderMutation.isPending ? 'Processing...' : `Pay ₹${track.amount || 5} Now`}
           </Button>
 
           <Button
@@ -292,18 +279,6 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
           </Typography>
         </Box>
       </Box>
-
-      {/* Toast Notifications */}
-      <Snackbar
-        open={toast.open}
-        autoHideDuration={4000}
-        onClose={closeToast}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert onClose={closeToast} severity={toast.severity} sx={{ width: '100%' }}>
-          {toast.message}
-        </Alert>
-      </Snackbar>
     </Drawer>
   );
 };
