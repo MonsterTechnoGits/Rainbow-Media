@@ -4,7 +4,6 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 // Check if we're in a browser environment and have required env vars
-const isClient = typeof window !== 'undefined';
 const hasFirebaseConfig =
   process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
   process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN &&
