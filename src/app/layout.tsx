@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+
 import { AuthProvider } from '../contexts/AuthContext';
 import { CommentProvider } from '../contexts/CommentContext';
 import { MusicPlayerProvider } from '../contexts/MusicPlayerContext';
@@ -17,13 +19,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <head />
       <body>
-        <ThemeProvider>
-          <AuthProvider>
-            <CommentProvider>
-              <MusicPlayerProvider>{children}</MusicPlayerProvider>
-            </CommentProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <Suspense>
+          <ThemeProvider>
+            <AuthProvider>
+              <CommentProvider>
+                <MusicPlayerProvider>{children}</MusicPlayerProvider>
+              </CommentProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </Suspense>
       </body>
     </html>
   );
