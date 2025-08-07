@@ -14,13 +14,14 @@ import {
   useTheme,
   alpha,
   Chip,
+  Snackbar,
+  Alert,
 } from '@mui/material';
-import { doc, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
+import { RazorpayOrderOptions, useRazorpay } from 'react-razorpay';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
-import { MusicTrack, PurchaseDetails } from '@/types/music';
+import { MusicTrack } from '@/types/music';
 
 interface PaymentDrawerProps {
   open: boolean;
@@ -35,280 +36,93 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
   track,
   onPaymentSuccess,
 }) => {
-  const { user, addPurchase } = useAuth();
   const theme = useTheme();
   const [loading, setLoading] = useState(false);
+  const { Razorpay } = useRazorpay();
+  const { user, addPurchase } = useAuth();
 
-  const waitForRazorpay = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if (window.Razorpay) {
-        resolve();
-        return;
-      }
+  // Toast state management
+  const [toast, setToast] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'warning' | 'info';
+  }>({
+    open: false,
+    message: '',
+    severity: 'info',
+  });
 
-      const maxAttempts = 20; // Wait up to 4 seconds
-      let attempts = 0;
+  const showToast = (message: string, severity: 'success' | 'error' | 'warning' | 'info') => {
+    setToast({ open: true, message, severity });
+  };
 
-      const checkInterval = setInterval(() => {
-        attempts++;
-        if (window.Razorpay) {
-          clearInterval(checkInterval);
-          resolve();
-        } else if (attempts >= maxAttempts) {
-          clearInterval(checkInterval);
-          reject(new Error('Razorpay script failed to load'));
-        }
-      }, 200);
-    });
+  const closeToast = () => {
+    setToast((prev) => ({ ...prev, open: false }));
   };
 
   const handlePayment = async () => {
-    if (!track || !user) {
-      alert('Missing track or user information');
+    if (!user) {
+      showToast('Please sign in to make a purchase', 'warning');
       return;
     }
 
     setLoading(true);
+    const res = await fetch('/api/razorpay/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: track?.amount || 5 }), // amount in INR
+    });
 
-    try {
-      // Wait for Razorpay script to load
-      console.log('Waiting for Razorpay script to load...');
-      await waitForRazorpay();
-      console.log('Razorpay script loaded successfully, typeof:', typeof window.Razorpay);
+    const order = await res.json();
+    setLoading(false);
 
-      // Add small delay to ensure everything is ready
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      console.log('Additional delay completed');
-    } catch (error) {
-      console.error('Razorpay script loading failed:', error);
-      alert('Payment gateway failed to load. Please refresh the page and try again.');
-      setLoading(false);
+    if (!window.Razorpay) {
+      showToast(
+        'Payment gateway is not supported in this browser. Please try a different browser or device.',
+        'error'
+      );
       return;
     }
 
-    try {
-      console.log('Creating order for track:', track.title, 'Amount:', track.amount || 5);
-
-      // For static export, create a client-side order without API route
-      const orderData = {
-        id: `order_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-        amount: (track.amount || 5) * 100, // Convert to paise
-        currency: 'INR',
-        receipt: `receipt_${track.id}_${Date.now()}`,
-      };
-
-      console.log('Order created successfully (client-side):', orderData);
-
-      if (!orderData.id) {
-        throw new Error('Invalid order data received - missing order ID');
-      }
-
-      const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-      if (!razorpayKey) {
-        throw new Error('Razorpay key is not configured');
-      }
-
-      // Detect mobile device
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      );
-      console.log('Is Mobile Device:', isMobile);
-
-      // EXACT copy of working test page configuration
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        name: 'RainbowMedia Test', // Same name as test page
-        description: 'Test Payment', // Same description as test page
-        order_id: orderData.id,
-        handler: function (response: { razorpay_payment_id: string; razorpay_order_id: string }) {
-          console.log('✅ Payment Successful! Payment ID:', response.razorpay_payment_id);
-          setLoading(false);
-
-          // Process the payment asynchronously
-          (async () => {
-            try {
-              // Add track to user's purchases
-              await addPurchase(track.id);
-
-              // Store detailed purchase information in Firestore
-              const purchaseDetails: PurchaseDetails = {
-                trackId: track.id,
-                amount: track.amount || 5,
-                currency: track.currency || 'INR',
-                paymentId: response.razorpay_payment_id,
-                orderId: response.razorpay_order_id,
-                timestamp: Date.now(),
-              };
-
-              // Store purchase details in Firestore
-              if (db) {
-                const purchaseRef = doc(db, 'purchases', response.razorpay_payment_id);
-                await setDoc(purchaseRef, {
-                  ...purchaseDetails,
-                  userId: user.uid,
-                  trackTitle: track.title,
-                  trackArtist: track.artist,
-                });
-              }
-
-              console.log('Purchase processed successfully:', purchaseDetails);
-              alert(`Payment successful! Track "${track.title}" is now available.`);
-              onPaymentSuccess();
-              onClose();
-            } catch (error) {
-              console.error('Error processing successful payment:', error);
-              alert(
-                'Payment successful, but there was an error saving your purchase. Please contact support.'
-              );
-            }
-          })();
-        },
-        prefill: {
-          name: 'Test User', // Same as test page
-          email: 'test@example.com', // Same as test page
-        },
-        theme: {
-          color: '#1976d2', // Same as test page
-        },
-        modal: {
-          ondismiss: () => {
-            console.log('Payment cancelled by user');
-            setLoading(false);
-          },
-        },
-      };
-
-      console.log('Opening Razorpay payment modal with options:', {
-        key: options.key.substring(0, 12) + '...',
-        amount: orderData.amount,
-        currency: orderData.currency,
-        orderId: orderData.id,
-      });
-
-      // Detailed debugging
-      console.log('=== RAZORPAY DEBUG START ===');
-      console.log('Current URL:', window.location.href);
-      console.log('User agent:', navigator.userAgent);
-      console.log('Razorpay object type:', typeof window.Razorpay);
-      console.log('Razorpay key (first 8 chars):', options.key.substring(0, 8));
-      console.log('Order amount:', orderData.amount);
-      console.log('Order currency:', orderData.currency);
-
-      // Check for script conflicts
-      const scripts = Array.from(document.querySelectorAll('script')).filter(
-        (s) => s.src.includes('razorpay') || s.src.includes('checkout')
-      );
-      console.log(
-        'Razorpay scripts loaded:',
-        scripts.map((s) => s.src)
-      );
-      console.log(
-        'Window keys with "razor":',
-        Object.keys(window).filter((k) => k.toLowerCase().includes('razor'))
-      );
-
-      console.log(
-        'Full options object:',
-        JSON.stringify(
-          {
-            ...options,
-            handler: '[Function]',
-          },
-          null,
-          2
-        )
-      );
-
-      try {
-        console.log('Creating Razorpay instance...');
-
-        // Force clean Razorpay instance
-        const RazorpayConstructor = window.Razorpay;
-        const paymentObject = new RazorpayConstructor(options);
-
-        console.log('Razorpay instance created successfully, type:', typeof paymentObject);
-        console.log('PaymentObject methods:', Object.getOwnPropertyNames(paymentObject));
-
-        // Add delay before opening to ensure DOM is ready
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        console.log('Opening Razorpay modal...');
-
-        // Add global error listener to catch Razorpay internal errors
-        const originalOnError = window.onerror;
-        const originalOnUnhandledRejection = window.onunhandledrejection;
-
-        window.onerror = (message, source, lineno, colno, error) => {
-          console.error('🚨 Window Error (possibly from Razorpay):', {
-            message,
-            source,
-            lineno,
-            colno,
-            error,
-          });
-          if (originalOnError) originalOnError(message, source, lineno, colno, error);
-        };
-
-        window.onunhandledrejection = (event) => {
-          console.error('🚨 Unhandled Rejection (possibly from Razorpay):', event.reason);
-          if (originalOnUnhandledRejection) originalOnUnhandledRejection.call(window, event);
-        };
-
-        // Monitor for any alerts
-        const originalAlert = window.alert;
-        window.alert = (message) => {
-          console.error('🚨 Alert captured:', message);
-          console.trace('Alert stack trace');
-          return originalAlert(message);
-        };
-
-        // Try to isolate Razorpay from CSS conflicts
-        document.body.style.cssText +=
-          '; position: relative !important; z-index: 999999 !important;';
-
-        paymentObject.open();
-        console.log('Razorpay modal opened successfully');
-
-        // Restore after 5 seconds
-        setTimeout(() => {
-          window.onerror = originalOnError;
-          window.onunhandledrejection = originalOnUnhandledRejection;
-          window.alert = originalAlert;
-        }, 5000);
-      } catch (razorpayError) {
-        console.error('=== RAZORPAY ERROR ===');
-        console.error('Error type:', typeof razorpayError);
-        console.error(
-          'Error message:',
-          razorpayError instanceof Error ? razorpayError.message : razorpayError
-        );
-        console.error(
-          'Error stack:',
-          razorpayError instanceof Error ? razorpayError.stack : 'No stack'
-        );
-        console.error('=== END RAZORPAY ERROR ===');
-
-        // Handle mobile browser compatibility issues
-        if (isMobile) {
-          alert(
-            '⚠️ Mobile Payment Issue\n\nPlease try:\n1. Open in Chrome mobile browser\n2. Enable JavaScript and cookies\n3. Disable any ad blockers\n4. Try on desktop for best experience'
+    const options: RazorpayOrderOptions = {
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '',
+      amount: order.amount,
+      currency: order.currency,
+      name: 'Rainbow Media',
+      description: `Purchase: ${track?.title} by ${track?.artist}`,
+      order_id: order.id, // Generate order_id on server
+      handler: async (response) => {
+        try {
+          // Add purchase to user's account
+          if (track?.id) {
+            await addPurchase(track.id);
+          }
+          console.log('Payment successful:', response);
+          onPaymentSuccess();
+          onClose();
+        } catch (error) {
+          console.error('Error processing payment:', error);
+          showToast(
+            'Payment successful but failed to update account. Please contact support.',
+            'error'
           );
         }
+      },
+      prefill: {
+        name: user?.displayName || 'Guest User',
+        email: user?.email || '',
+        contact: '',
+      },
+      theme: {
+        color: '#F37254',
+      },
+    };
 
-        throw razorpayError;
-      }
+    const razorpayInstance = new Razorpay(options);
+    razorpayInstance.open();
 
-      console.log('=== RAZORPAY DEBUG END ===');
-    } catch (error) {
-      console.error('Payment initiation failed:', error);
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to initiate payment. Please try again.';
-      alert(errorMessage);
-    } finally {
-      setLoading(false);
-    }
+    // const razor = new window.Razorpay(options);
+    // razor.open();
   };
 
   if (!track) return null;
@@ -478,6 +292,18 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
           </Typography>
         </Box>
       </Box>
+
+      {/* Toast Notifications */}
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={4000}
+        onClose={closeToast}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={closeToast} severity={toast.severity} sx={{ width: '100%' }}>
+          {toast.message}
+        </Alert>
+      </Snackbar>
     </Drawer>
   );
 };

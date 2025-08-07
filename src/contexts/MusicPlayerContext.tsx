@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter, useSearchParams } from 'next/navigation';
 import React, {
   createContext,
   useContext,
@@ -9,7 +10,7 @@ import React, {
   useCallback,
 } from 'react';
 
-import { mockMusicTracks } from '@/data/musicData';
+import { trackApi } from '@/services/api';
 import { MusicTrack, PlayerState, PlayerDrawerState } from '@/types/music';
 
 interface MusicPlayerContextType {
@@ -26,6 +27,15 @@ interface MusicPlayerContextType {
   toggleShuffle: () => void;
   toggleRepeat: () => void;
   audioRef: React.RefObject<HTMLAudioElement | null>;
+  // URL-based track playing
+  playTrackById: (
+    trackId: string,
+    updateUrl?: boolean,
+    authContext?: { user: unknown; hasPurchased: (id: string) => boolean }
+  ) => Promise<void>;
+  updateUrlWithTrack: (trackId: string) => void;
+  removeTrackFromUrl: () => void;
+  cancelAndCloseAll: () => void;
   // Payment and auth related
   showAuthDrawer: boolean;
   setShowAuthDrawer: (show: boolean) => void;
@@ -61,7 +71,7 @@ const initialState: PlayerState = {
   volume: 1,
   isShuffled: false,
   isRepeated: false,
-  queue: mockMusicTracks,
+  queue: [],
   currentIndex: -1,
 };
 
@@ -119,19 +129,127 @@ const MusicPlayerContext = createContext<MusicPlayerContextType | undefined>(und
 
 export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(playerReducer, initialState);
-  const [drawerState, setDrawerState] = React.useState<PlayerDrawerState>('closed');
+  const [drawerState, setDrawerStateInternal] = React.useState<PlayerDrawerState>('closed');
   const [showAuthDrawer, setShowAuthDrawer] = React.useState(false);
   const [showPaymentDrawer, setShowPaymentDrawer] = React.useState(false);
   const [pendingTrack, setPendingTrack] = React.useState<MusicTrack | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const playTrack = (track: MusicTrack, trackList?: MusicTrack[]) => {
-    const queue = trackList || mockMusicTracks;
+    // If no trackList provided, use current queue or fetch from API
+    const queue = trackList || state.queue;
     const index = queue.findIndex((t) => t.id === track.id);
     dispatch({ type: 'SET_CURRENT_TRACK', payload: { track, queue, index } });
     dispatch({ type: 'SET_LOADING', payload: true });
     // Don't set playing state yet, let the audio events handle it
     setDrawerState('mini');
+    // URL will be updated only when drawer state changes to 'expanded'
+  };
+
+  const updateUrlWithTrack = useCallback(
+    (trackId: string) => {
+      // Only update URL with track ID when expanded player is open
+      if (drawerState === 'expanded') {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('track', trackId);
+        router.push(`/?${params.toString()}`, { scroll: false });
+      }
+    },
+    [drawerState, searchParams, router]
+  );
+
+  const removeTrackFromUrl = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('track');
+    const newUrl = params.toString() ? `/?${params.toString()}` : '/';
+    router.push(newUrl, { scroll: false });
+  };
+
+  const cancelAndCloseAll = () => {
+    // Close all drawers and clear URL
+    setShowAuthDrawer(false);
+    setShowPaymentDrawer(false);
+    setPendingTrack(null);
+    setDrawerStateInternal('mini');
+    removeTrackFromUrl();
+  };
+
+  const setDrawerState = (newState: PlayerDrawerState) => {
+    const previousState = drawerState;
+    setDrawerStateInternal(newState);
+
+    // Handle URL updates based on state changes
+    if (newState === 'expanded' && state.currentTrack) {
+      // Add track ID to URL when expanding to full screen
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('track', state.currentTrack.id);
+      router.push(`/?${params.toString()}`, { scroll: false });
+    } else if (previousState === 'expanded' && newState !== 'expanded') {
+      // Remove track ID from URL when closing expanded player
+      removeTrackFromUrl();
+    }
+  };
+
+  const playTrackById = async (
+    trackId: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _updateUrl: boolean = true,
+    authContext?: { user: unknown; hasPurchased: (id: string) => boolean }
+  ) => {
+    try {
+      // First try to find in current queue
+      let track = state.queue.find((t) => t.id === trackId);
+
+      if (!track) {
+        // If not found in queue, fetch from API
+        const response = await trackApi.getTrack(trackId);
+        track = response;
+      }
+
+      if (track) {
+        // Add validation logic similar to handleTrackClick in MusicList
+        if (track.paid && authContext) {
+          // Check if user is authenticated
+          if (!authContext.user) {
+            setPendingTrack(track);
+            setShowAuthDrawer(true);
+            return;
+          }
+
+          // Check if user has already purchased the track
+          if (!authContext.hasPurchased(track.id)) {
+            setPendingTrack(track);
+            setShowPaymentDrawer(true);
+            return;
+          }
+        }
+
+        // Play the track if it's free or user has purchased it
+        // If we don't have a full queue, fetch tracks from API
+        let queue = state.queue;
+        if (queue.length === 0) {
+          try {
+            const tracksResponse = await trackApi.getTracks();
+            queue = tracksResponse.tracks;
+          } catch (error) {
+            console.error('Failed to fetch tracks for queue:', error);
+            queue = [track]; // Use single track as queue
+          }
+        }
+
+        const index = queue.findIndex((t) => t.id === track!.id);
+        dispatch({ type: 'SET_CURRENT_TRACK', payload: { track, queue, index } });
+        dispatch({ type: 'SET_LOADING', payload: true });
+        setDrawerState('expanded'); // Open expanded player directly for URL-based loading
+        // URL will be updated automatically by setDrawerState
+      } else {
+        console.error('Track not found:', trackId);
+      }
+    } catch (error) {
+      console.error('Error loading track:', error);
+    }
   };
 
   const pauseTrack = () => {
@@ -142,17 +260,7 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     dispatch({ type: 'SET_PLAYING', payload: true });
   };
 
-  const nextTrack = useCallback(() => {
-    if (state.queue.length > 0) {
-      dispatch({ type: 'NEXT_TRACK' });
-    }
-  }, [state.queue.length]);
-
-  const previousTrack = useCallback(() => {
-    if (state.queue.length > 0) {
-      dispatch({ type: 'PREVIOUS_TRACK' });
-    }
-  }, [state.queue.length]);
+  // These functions are replaced by nextTrackWithUrl and previousTrackWithUrl
 
   const seekTo = (time: number) => {
     if (audioRef.current) {
@@ -175,6 +283,29 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const toggleRepeat = () => {
     dispatch({ type: 'TOGGLE_REPEAT' });
   };
+
+  // Update next/previous track functions to update URL
+  const nextTrackWithUrl = useCallback(() => {
+    if (state.queue.length > 0) {
+      dispatch({ type: 'NEXT_TRACK' });
+      const nextIndex = state.currentIndex < state.queue.length - 1 ? state.currentIndex + 1 : 0;
+      const nextTrack = state.queue[nextIndex];
+      if (nextTrack) {
+        updateUrlWithTrack(nextTrack.id);
+      }
+    }
+  }, [state.currentIndex, state.queue, updateUrlWithTrack]);
+
+  const previousTrackWithUrl = useCallback(() => {
+    if (state.queue.length > 0) {
+      dispatch({ type: 'PREVIOUS_TRACK' });
+      const prevIndex = state.currentIndex > 0 ? state.currentIndex - 1 : state.queue.length - 1;
+      const prevTrack = state.queue[prevIndex];
+      if (prevTrack) {
+        updateUrlWithTrack(prevTrack.id);
+      }
+    }
+  }, [state.currentIndex, state.queue, updateUrlWithTrack]);
 
   // Audio event handlers
   useEffect(() => {
@@ -229,15 +360,16 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         audio.currentTime = 0;
         audio.play();
       } else {
-        nextTrack();
+        nextTrackWithUrl();
       }
     };
 
-    const handleError = () => {
+    const handleError = (event: Event) => {
       dispatch({ type: 'SET_LOADING', payload: false });
       dispatch({ type: 'SET_BUFFERING', payload: false });
       dispatch({ type: 'SET_PLAYING', payload: false });
-      console.error('Audio loading failed');
+      console.error('Audio loading failed for track:', state.currentTrack?.title, event);
+      // You could add toast notification here for user feedback
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
@@ -259,7 +391,7 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
     };
-  }, [state.isRepeated, state.currentTrack, nextTrack]);
+  }, [state.isRepeated, state.currentTrack, nextTrackWithUrl]);
 
   // Control audio playback based on state (for manual play/pause)
   useEffect(() => {
@@ -278,10 +410,19 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const audio = audioRef.current;
     if (!audio || !state.currentTrack) return;
 
-    audio.src = state.currentTrack.audioUrl;
+    // Validate audio URL before setting
+    const audioUrl = state.currentTrack.audioUrl;
+    if (!audioUrl || typeof audioUrl !== 'string') {
+      console.warn('Invalid audio URL for track:', state.currentTrack.title);
+      return;
+    }
+
+    audio.src = audioUrl;
     audio.preload = 'auto'; // Enable preloading
     audio.load(); // Start loading the audio
   }, [state.currentTrack]);
+
+  // URL-based track loading is now handled by useUrlTrackLoader hook
 
   const value: MusicPlayerContextType = {
     state,
@@ -290,13 +431,17 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     playTrack,
     pauseTrack,
     resumeTrack,
-    nextTrack,
-    previousTrack,
+    nextTrack: nextTrackWithUrl,
+    previousTrack: previousTrackWithUrl,
     seekTo,
     setVolume,
     toggleShuffle,
     toggleRepeat,
     audioRef,
+    playTrackById,
+    updateUrlWithTrack,
+    removeTrackFromUrl,
+    cancelAndCloseAll,
     showAuthDrawer,
     setShowAuthDrawer,
     showPaymentDrawer,

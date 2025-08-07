@@ -33,7 +33,7 @@ const AuthDrawer: React.FC<AuthDrawerProps> = ({
   trackPrice = 5,
   onAuthSuccess,
 }) => {
-  const { signInWithGoogle, signInWithGoogleRedirect, loading } = useAuth();
+  const { signInWithGoogle, loading } = useAuth();
   const theme = useTheme();
 
   const isMobile = () => {
@@ -60,8 +60,8 @@ const AuthDrawer: React.FC<AuthDrawerProps> = ({
 
   const handleGoogleSignInRedirect = async () => {
     try {
-      await signInWithGoogleRedirect();
-      // Redirect will happen, no need to call onAuthSuccess here
+      await signInWithGoogle();
+      onAuthSuccess?.();
     } catch (error: unknown) {
       console.error('Redirect sign in failed:', error);
       alert('Sign in failed. Please try again.');

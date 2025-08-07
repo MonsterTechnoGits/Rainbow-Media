@@ -2,17 +2,16 @@
 
 import {
   signInWithPopup,
-  signInWithRedirect,
   getRedirectResult,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User as FirebaseUser,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
+import { userService, purchaseService } from '@/services/firestore';
 import { User } from '@/types/music';
 
 interface AuthContextType {
@@ -20,7 +19,6 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
-  signInWithGoogleRedirect: () => Promise<void>;
   signOut: () => Promise<void>;
   hasPurchased: (trackId: string) => boolean;
   addPurchase: (trackId: string) => Promise<void>;
@@ -33,20 +31,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const isMobile = () => {
-    if (typeof window === 'undefined') return false;
-    return (
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-      window.innerWidth <= 768
-    );
-  };
-
   const createUserDocument = async (firebaseUser: FirebaseUser): Promise<User> => {
-    if (!db) throw new Error('Firebase not initialized');
-    const userRef = doc(db, 'users', firebaseUser.uid);
-    const userSnap = await getDoc(userRef);
-
-    if (!userSnap.exists()) {
+    try {
       const userData: User = {
         uid: firebaseUser.uid,
         email: firebaseUser.email!,
@@ -55,21 +41,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         purchases: [],
       };
 
-      await setDoc(userRef, userData);
-      return userData;
+      return await userService.createUser(userData);
+    } catch (error) {
+      console.error('Error creating user document via service:', error);
+      throw error;
     }
-
-    return userSnap.data() as User;
   };
 
   const signInWithGoogle = async () => {
     if (!auth) throw new Error('Firebase not initialized');
-
-    // On mobile devices, use redirect method directly for better reliability
-    if (isMobile()) {
-      console.log('Mobile device detected, using redirect method for better compatibility');
-      return await signInWithGoogleRedirect();
-    }
 
     try {
       const provider = new GoogleAuthProvider();
@@ -77,11 +57,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Configure the provider to ensure compatibility
       provider.addScope('email');
       provider.addScope('profile');
-
-      // Set custom parameters to avoid "browser not supported" errors
-      provider.setCustomParameters({
-        prompt: 'select_account',
-      });
 
       const result = await signInWithPopup(auth, provider);
       const userData = await createUserDocument(result.user);
@@ -90,43 +65,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error signing in with Google:', error);
       const firebaseError = error as { code?: string; message?: string };
 
-      // Handle specific Firebase Auth errors
-      if (firebaseError.code === 'auth/popup-blocked') {
-        console.log('Popup blocked, falling back to redirect method');
-        return await signInWithGoogleRedirect();
-      } else if (firebaseError.code === 'auth/popup-closed-by-user') {
-        console.log('Popup closed by user, trying redirect method as fallback');
-        return await signInWithGoogleRedirect();
-      } else if (firebaseError.code === 'auth/operation-not-supported-in-this-environment') {
-        // Fallback to redirect method
-        console.log('Popup not supported, falling back to redirect...');
-        return await signInWithGoogleRedirect();
-      } else if (firebaseError.code === 'auth/unauthorized-domain') {
+      if (firebaseError.code === 'auth/unauthorized-domain') {
         throw new Error('This domain is not authorized for Google Sign-In.');
       }
 
-      throw error;
-    }
-  };
-
-  const signInWithGoogleRedirect = async () => {
-    if (!auth) throw new Error('Firebase not initialized');
-
-    try {
-      const provider = new GoogleAuthProvider();
-
-      // Configure the provider to ensure compatibility
-      provider.addScope('email');
-      provider.addScope('profile');
-
-      provider.setCustomParameters({
-        prompt: 'select_account',
-      });
-
-      await signInWithRedirect(auth, provider);
-      // The redirect will happen, and the result will be handled in useEffect
-    } catch (error: unknown) {
-      console.error('Error with redirect sign-in:', error);
       throw error;
     }
   };
@@ -149,21 +91,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addPurchase = async (trackId: string) => {
-    if (!user || !db) return;
+    if (!user) return;
 
-    const updatedUser = {
-      ...user,
-      purchases: [...user.purchases, trackId],
-    };
+    try {
+      const updatedUser = {
+        ...user,
+        purchases: [...user.purchases, trackId],
+      };
 
-    const userRef = doc(db, 'users', user.uid);
-    await setDoc(userRef, updatedUser, { merge: true });
-    setUser(updatedUser);
+      const result = await purchaseService.addPurchase(user.uid, trackId, updatedUser);
+      setUser(result);
+    } catch (error) {
+      console.error('Error adding purchase via service:', error);
+      throw error;
+    }
   };
 
   useEffect(() => {
     // Skip authentication setup if Firebase is not available (during build)
-    if (!auth || !db) {
+    if (!auth) {
       setLoading(false);
       return;
     }
@@ -206,7 +152,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     firebaseUser,
     loading,
     signInWithGoogle,
-    signInWithGoogleRedirect,
     signOut,
     hasPurchased,
     addPurchase,

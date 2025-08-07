@@ -11,12 +11,8 @@ import {
   useTheme,
   TextField,
   InputAdornment,
-  Fade,
   alpha,
-  Paper,
   Stack,
-  Avatar,
-  Chip,
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -53,7 +49,6 @@ export default function Toolbar({
   const theme = useTheme();
   const router = useRouter();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const open = Boolean(anchorEl);
 
@@ -68,14 +63,6 @@ export default function Toolbar({
   const handleMenuItemClick = (onClick: () => void) => {
     onClick();
     handleMenuClose();
-  };
-
-  const handleSearchToggle = () => {
-    setIsSearchOpen(!isSearchOpen);
-    if (isSearchOpen) {
-      setSearchQuery('');
-      onSearch?.('');
-    }
   };
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,363 +81,259 @@ export default function Toolbar({
       position="fixed"
       elevation={0}
       sx={{
-        bgcolor: 'transparent',
+        bgcolor: theme.palette.mode === 'dark' ? '#0f0f0f' : '#ffffff',
+        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+        backdropFilter: 'blur(20px)',
         backgroundImage: 'none',
       }}
     >
-      {/* Main Header Card */}
-      <Paper
-        elevation={0}
+      <MuiToolbar
         sx={{
-          m: 2,
-          borderRadius: 4,
-          background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-          color: 'white',
-          position: 'relative',
-          overflow: 'hidden',
-          boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.3)}`,
+          minHeight: '64px !important',
+          px: { xs: 2, sm: 3 },
+          justifyContent: 'space-between',
         }}
       >
-        {/* Decorative Elements */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: -20,
-            right: -20,
-            width: 100,
-            height: 100,
-            borderRadius: '50%',
-            bgcolor: 'rgba(255,255,255,0.1)',
-          }}
-        />
-        <Box
-          sx={{
-            position: 'absolute',
-            bottom: -30,
-            left: -30,
-            width: 80,
-            height: 80,
-            borderRadius: '50%',
-            bgcolor: 'rgba(255,255,255,0.05)',
-          }}
-        />
-
-        <MuiToolbar
-          sx={{
-            minHeight: '72px !important',
-            position: 'relative',
-            zIndex: 1,
-          }}
-        >
-          {/* Left Section */}
-          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-            {showBackButton ? (
+        {/* Left Section - Logo/Back Button + Title */}
+        <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, flex: '0 0 auto' }}>
+          {showBackButton ? (
+            <>
               <IconButton
-                sx={{
-                  color: 'white',
-                  bgcolor: 'rgba(255,255,255,0.15)',
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' },
-                  mr: 2,
-                  backdropFilter: 'blur(10px)',
-                }}
                 onClick={() => router.back()}
+                sx={{
+                  mr: 2,
+                  color: theme.palette.text.primary,
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.text.primary, 0.08),
+                  },
+                }}
               >
                 <Iconify icon="material-symbols:arrow-back" />
               </IconButton>
-            ) : (
-              <Avatar
+              <Typography
+                variant="h6"
                 sx={{
-                  width: 48,
-                  height: 48,
-                  bgcolor: 'rgba(255,255,255,0.2)',
-                  mr: 2,
+                  fontWeight: 500,
+                  color: theme.palette.text.primary,
+                  fontSize: '1.125rem',
                 }}
               >
-                <Iconify icon="material-symbols:music-note" width={24} height={24} />
-              </Avatar>
-            )}
-
-            {/* Title Section */}
-            <Box sx={{ minWidth: 0 }}>
-              <Fade in={!isSearchOpen} timeout={200}>
-                <Box
-                  sx={{
-                    position: isSearchOpen ? 'absolute' : 'static',
-                    opacity: isSearchOpen ? 0 : 1,
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  <Typography
-                    variant="h5"
-                    component="h1"
-                    sx={{
-                      fontWeight: 700,
-                      color: 'white',
-                      mb: 0.5,
-                    }}
-                  >
-                    {title}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: 'rgba(255,255,255,0.8)',
-                      fontWeight: 500,
-                    }}
-                  >
-                    Your personal music player
-                  </Typography>
-                </Box>
-              </Fade>
-
-              {/* Search Field */}
-              <Fade in={isSearchOpen} timeout={200}>
-                <Paper
-                  elevation={0}
-                  sx={{
-                    position: isSearchOpen ? 'static' : 'absolute',
-                    width: isSearchOpen ? 320 : 0,
-                    opacity: isSearchOpen ? 1 : 0,
-                    transition: 'all 0.2s ease',
-                    bgcolor: 'rgba(255,255,255,0.15)',
-                    backdropFilter: 'blur(20px)',
-                    borderRadius: 3,
-                    border: '1px solid rgba(255,255,255,0.2)',
-                  }}
-                >
-                  <TextField
-                    fullWidth
-                    size="small"
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    placeholder={searchPlaceholder}
-                    variant="outlined"
-                    autoFocus={isSearchOpen}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Iconify
-                            icon="material-symbols:search"
-                            sx={{ color: 'rgba(255,255,255,0.7)' }}
-                          />
-                        </InputAdornment>
-                      ),
-                      endAdornment: searchQuery && (
-                        <InputAdornment position="end">
-                          <IconButton
-                            size="small"
-                            onClick={handleSearchClear}
-                            sx={{
-                              color: 'rgba(255,255,255,0.7)',
-                              '&:hover': {
-                                color: 'white',
-                                bgcolor: 'rgba(255,255,255,0.1)',
-                              },
-                            }}
-                          >
-                            <Iconify icon="material-symbols:close" />
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                      sx: {
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          border: 'none',
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          border: 'none',
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          border: 'none',
-                        },
-                        bgcolor: 'transparent',
-                      },
-                    }}
-                    sx={{
-                      '& .MuiInputBase-input': {
-                        color: 'white',
-                        fontWeight: 500,
-                        '&::placeholder': {
-                          color: 'rgba(255,255,255,0.7)',
-                          opacity: 1,
-                        },
-                      },
-                    }}
-                  />
-                </Paper>
-              </Fade>
-            </Box>
-          </Box>
-
-          {/* Right Section */}
-          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
-            {/* Search Results Chip */}
-            {isSearchOpen && searchQuery && (
-              <Chip
-                label={`${searchQuery.length > 10 ? searchQuery.substring(0, 10) + '...' : searchQuery}`}
-                size="small"
-                onDelete={handleSearchClear}
+                {title}
+              </Typography>
+            </>
+          ) : (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                mr: { xs: 2, sm: 3 },
+                color: '#ff0000',
+              }}
+            >
+              <Iconify icon="material-symbols:music-note" width={24} height={24} />
+              <Typography
+                variant="h6"
                 sx={{
-                  bgcolor: 'rgba(255,255,255,0.15)',
-                  color: 'white',
-                  fontSize: '0.75rem',
+                  ml: 1,
                   fontWeight: 600,
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  '& .MuiChip-deleteIcon': {
-                    color: 'rgba(255,255,255,0.7)',
+                  color: theme.palette.text.primary,
+                  fontSize: '1.125rem',
+                  display: { xs: 'none', sm: 'block' },
+                }}
+              >
+                Music
+              </Typography>
+            </Box>
+          )}
+        </Box>
+
+        {/* Center Section - Search Bar */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            flex: '1 1 auto',
+            maxWidth: '640px',
+            mx: { xs: 1, sm: 3 },
+          }}
+        >
+          {onSearch && (
+            <Box
+              sx={{
+                position: 'relative',
+                width: '100%',
+                maxWidth: '540px',
+              }}
+            >
+              <TextField
+                fullWidth
+                size="small"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder={searchPlaceholder}
+                variant="outlined"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <IconButton
+                        size="small"
+                        sx={{
+                          color: theme.palette.text.secondary,
+                          '&:hover': {
+                            bgcolor: 'transparent',
+                          },
+                        }}
+                        disableRipple
+                      >
+                        <Iconify icon="material-symbols:search" width={20} height={20} />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchQuery && (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={handleSearchClear}
+                        sx={{
+                          color: theme.palette.text.secondary,
+                          '&:hover': {
+                            bgcolor: alpha(theme.palette.text.primary, 0.08),
+                          },
+                        }}
+                      >
+                        <Iconify icon="material-symbols:close" width={20} height={20} />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                  sx: {
+                    height: '40px',
+                    bgcolor: theme.palette.mode === 'dark' ? '#1c1c1c' : '#f1f3f4',
+                    borderRadius: '20px',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      border: 'none',
+                    },
                     '&:hover': {
-                      color: 'white',
+                      bgcolor: theme.palette.mode === 'dark' ? '#222222' : '#e8eaed',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        border: `1px solid ${alpha(theme.palette.text.primary, 0.2)}`,
+                      },
+                    },
+                    '&.Mui-focused': {
+                      bgcolor: theme.palette.mode === 'dark' ? '#0f0f0f' : '#ffffff',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        border: `2px solid ${theme.palette.primary.main}`,
+                      },
+                    },
+                  },
+                }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    color: theme.palette.text.primary,
+                    fontSize: '16px',
+                    fontWeight: 400,
+                    '&::placeholder': {
+                      color: theme.palette.text.secondary,
+                      opacity: 1,
                     },
                   },
                 }}
               />
+            </Box>
+          )}
+        </Box>
+
+        {/* Right Section - Action Buttons */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            {/* Settings Action */}
+            {singleAction && (
+              <IconButton
+                onClick={singleAction.onClick}
+                title={singleAction.tooltip}
+                sx={{
+                  color: theme.palette.text.primary,
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.text.primary, 0.08),
+                  },
+                }}
+              >
+                <Iconify icon={singleAction.icon} width={24} height={24} />
+              </IconButton>
             )}
 
-            <Stack direction="row" spacing={1} alignItems="center">
-              {/* Search Toggle */}
-              {onSearch && (
-                <Paper
-                  elevation={0}
+            {/* Menu Options */}
+            {menuOptions && menuOptions.length > 0 && (
+              <>
+                <IconButton
+                  onClick={handleMenuClick}
+                  aria-label="menu options"
                   sx={{
-                    borderRadius: 2,
-                    bgcolor: isSearchOpen ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.15)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: theme.palette.text.primary,
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.text.primary, 0.08),
+                    },
                   }}
                 >
-                  <IconButton
-                    sx={{
-                      color: 'white',
-                      '&:hover': {
-                        bgcolor: 'rgba(255,255,255,0.1)',
-                      },
-                    }}
-                    onClick={handleSearchToggle}
-                    title="Search"
-                  >
-                    <Iconify
-                      icon={isSearchOpen ? 'material-symbols:close' : 'material-symbols:search'}
-                    />
-                  </IconButton>
-                </Paper>
-              )}
-
-              {/* Settings Action */}
-              {singleAction && (
-                <Paper
-                  elevation={0}
-                  sx={{
-                    borderRadius: 2,
-                    bgcolor: 'rgba(255,255,255,0.15)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255,255,255,0.2)',
+                  <Iconify icon="material-symbols:more-vert" width={24} height={24} />
+                </IconButton>
+                <Menu
+                  anchorEl={anchorEl}
+                  open={open}
+                  onClose={handleMenuClose}
+                  anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
                   }}
-                >
-                  <IconButton
-                    sx={{
-                      color: 'white',
-                      '&:hover': {
-                        bgcolor: 'rgba(255,255,255,0.1)',
-                      },
-                    }}
-                    onClick={singleAction.onClick}
-                    title={singleAction.tooltip}
-                  >
-                    <Iconify icon={singleAction.icon} />
-                  </IconButton>
-                </Paper>
-              )}
-
-              {/* Menu Options */}
-              {menuOptions && menuOptions.length > 0 && (
-                <>
-                  <Paper
-                    elevation={0}
-                    sx={{
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                  PaperProps={{
+                    sx: {
+                      bgcolor: theme.palette.background.paper,
+                      border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                       borderRadius: 2,
-                      bgcolor: 'rgba(255,255,255,0.15)',
-                      backdropFilter: 'blur(10px)',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                    }}
-                  >
-                    <IconButton
+                      mt: 1,
+                      minWidth: 200,
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                    },
+                  }}
+                >
+                  {menuOptions.map((option, index) => (
+                    <MenuItem
+                      key={index}
+                      onClick={() => handleMenuItemClick(option.onClick)}
                       sx={{
-                        color: 'white',
+                        py: 1.5,
+                        px: 2,
                         '&:hover': {
-                          bgcolor: 'rgba(255,255,255,0.1)',
+                          bgcolor: alpha(theme.palette.text.primary, 0.08),
                         },
                       }}
-                      onClick={handleMenuClick}
-                      aria-label="menu options"
                     >
-                      <Iconify icon="material-symbols:more-vert" />
-                    </IconButton>
-                  </Paper>
-                  <Menu
-                    anchorEl={anchorEl}
-                    open={open}
-                    onClose={handleMenuClose}
-                    anchorOrigin={{
-                      vertical: 'bottom',
-                      horizontal: 'right',
-                    }}
-                    transformOrigin={{
-                      vertical: 'top',
-                      horizontal: 'right',
-                    }}
-                    PaperProps={{
-                      sx: {
-                        bgcolor: alpha(theme.palette.background.paper, 0.95),
-                        backdropFilter: 'blur(20px)',
-                        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                        borderRadius: 3,
-                        mt: 1,
-                        minWidth: 200,
-                      },
-                    }}
-                  >
-                    {menuOptions.map((option, index) => (
-                      <MenuItem
-                        key={index}
-                        onClick={() => handleMenuItemClick(option.onClick)}
-                        sx={{
-                          py: 1.5,
-                          px: 2,
-                          '&:hover': {
-                            bgcolor: alpha(theme.palette.primary.main, 0.08),
-                          },
-                        }}
-                      >
-                        {option.icon && (
-                          <Paper
-                            elevation={0}
-                            sx={{
-                              p: 0.5,
-                              mr: 1.5,
-                              borderRadius: 1.5,
-                              bgcolor: alpha(theme.palette.primary.main, 0.1),
-                            }}
-                          >
-                            <Iconify
-                              icon={option.icon}
-                              width={18}
-                              height={18}
-                              sx={{ color: theme.palette.primary.main }}
-                            />
-                          </Paper>
-                        )}
-                        <Typography variant="body2" fontWeight={500}>
-                          {option.label}
-                        </Typography>
-                      </MenuItem>
-                    ))}
-                  </Menu>
-                </>
-              )}
-            </Stack>
-          </Box>
-        </MuiToolbar>
-      </Paper>
+                      {option.icon && (
+                        <Box
+                          sx={{
+                            mr: 1.5,
+                            display: 'flex',
+                            alignItems: 'center',
+                            color: theme.palette.text.secondary,
+                          }}
+                        >
+                          <Iconify icon={option.icon} width={20} height={20} />
+                        </Box>
+                      )}
+                      <Typography variant="body2" fontWeight={400}>
+                        {option.label}
+                      </Typography>
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </>
+            )}
+          </Stack>
+        </Box>
+      </MuiToolbar>
     </AppBar>
   );
 }

@@ -91,8 +91,8 @@ const MiniPlayer: React.FC = () => {
           sx={{
             display: 'flex',
             alignItems: 'center',
-            p: 2.5,
-            gap: 2,
+            p: { xs: 1.5, sm: 2.5 },
+            gap: { xs: 1.5, sm: 2 },
           }}
         >
           {/* Album Art */}
@@ -102,8 +102,8 @@ const MiniPlayer: React.FC = () => {
               position: 'relative',
               borderRadius: 3,
               overflow: 'hidden',
-              width: 56,
-              height: 56,
+              width: { xs: 48, sm: 56 },
+              height: { xs: 48, sm: 56 },
               bgcolor: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
               border: `2px solid ${alpha(theme.palette.primary.main, 0.1)}`,
             }}
@@ -139,9 +139,10 @@ const MiniPlayer: React.FC = () => {
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
                 mb: 0.5,
+                fontSize: { xs: '0.85rem', sm: '0.875rem' },
               }}
             >
-              {state.currentTrack.title}
+              {state.currentTrack.title || 'Unknown Title'}
             </Typography>
             <Stack direction="row" alignItems="center" spacing={1}>
               <Typography
@@ -152,16 +153,17 @@ const MiniPlayer: React.FC = () => {
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                   fontWeight: 500,
+                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
                 }}
               >
-                {state.currentTrack.artist}
+                {state.currentTrack.artist || 'Unknown Artist'}
               </Typography>
               <Chip
                 label={state.isPlaying ? 'Playing' : 'Paused'}
                 size="small"
                 sx={{
-                  height: 16,
-                  fontSize: '0.65rem',
+                  height: { xs: 14, sm: 16 },
+                  fontSize: { xs: '0.6rem', sm: '0.65rem' },
                   bgcolor: state.isPlaying
                     ? alpha(theme.palette.success.main, 0.1)
                     : alpha(theme.palette.text.secondary, 0.1),
@@ -169,13 +171,14 @@ const MiniPlayer: React.FC = () => {
                     ? theme.palette.success.main
                     : theme.palette.text.secondary,
                   fontWeight: 600,
+                  display: { xs: 'none', sm: 'inline-flex' },
                 }}
               />
             </Stack>
           </Box>
 
           {/* Control Buttons */}
-          <Stack direction="row" alignItems="center" spacing={0.5}>
+          <Stack direction="row" alignItems="center" spacing={{ xs: 0.25, sm: 0.5 }}>
             <IconButton
               size="small"
               onClick={(e) => {
@@ -185,6 +188,7 @@ const MiniPlayer: React.FC = () => {
               sx={{
                 color: theme.palette.text.secondary,
                 bgcolor: alpha(theme.palette.text.primary, 0.05),
+                display: { xs: 'none', sm: 'inline-flex' },
                 '&:hover': {
                   bgcolor: alpha(theme.palette.text.primary, 0.08),
                   color: theme.palette.text.primary,
@@ -202,8 +206,8 @@ const MiniPlayer: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: 48,
-                  height: 48,
+                  width: { xs: 40, sm: 48 },
+                  height: { xs: 40, sm: 48 },
                   borderRadius: '50%',
                   bgcolor: theme.palette.primary.main,
                   boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
@@ -223,8 +227,8 @@ const MiniPlayer: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: 48,
-                  height: 48,
+                  width: { xs: 40, sm: 48 },
+                  height: { xs: 40, sm: 48 },
                   borderRadius: '50%',
                   bgcolor: theme.palette.primary.main,
                   cursor: 'pointer',
@@ -242,10 +246,18 @@ const MiniPlayer: React.FC = () => {
                 }}
               >
                 {state.isPlaying ? (
-                  <Pause sx={{ fontSize: '1.4rem', color: theme.palette.primary.contrastText }} />
+                  <Pause
+                    sx={{
+                      fontSize: { xs: '1.2rem', sm: '1.4rem' },
+                      color: theme.palette.primary.contrastText,
+                    }}
+                  />
                 ) : (
                   <PlayArrow
-                    sx={{ fontSize: '1.4rem', color: theme.palette.primary.contrastText }}
+                    sx={{
+                      fontSize: { xs: '1.2rem', sm: '1.4rem' },
+                      color: theme.palette.primary.contrastText,
+                    }}
                   />
                 )}
               </Paper>
@@ -260,6 +272,7 @@ const MiniPlayer: React.FC = () => {
               sx={{
                 color: theme.palette.text.secondary,
                 bgcolor: alpha(theme.palette.text.primary, 0.05),
+                display: { xs: 'none', sm: 'inline-flex' },
                 '&:hover': {
                   bgcolor: alpha(theme.palette.text.primary, 0.08),
                   color: theme.palette.text.primary,
@@ -281,7 +294,7 @@ const MiniPlayer: React.FC = () => {
                 },
               }}
             >
-              <ExpandLess sx={{ fontSize: '1.2rem' }} />
+              <ExpandLess sx={{ fontSize: { xs: '1rem', sm: '1.2rem' } }} />
             </IconButton>
           </Stack>
         </Box>

@@ -8,19 +8,19 @@ const nextConfig = {
     },
   },
 
-  // Enable static export for GitHub Pages
-  output: 'export',
+  // Disable static export to enable API routes
+  // output: 'export',
 
   // Disable image optimization for static export
   images: {
     unoptimized: true,
   },
 
-  // Set base path for GitHub Pages
-  basePath: process.env.NODE_ENV === 'production' ? '/Rainbow-Media' : '',
+  // Disable base path when not using static export
+  // basePath: process.env.NODE_ENV === 'production' ? '/Rainbow-Media' : '',
 
-  // Ensure assets work with base path
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/Rainbow-Media/' : '',
+  // Disable asset prefix when not using static export
+  // assetPrefix: process.env.NODE_ENV === 'production' ? '/Rainbow-Media/' : '',
 
   // Enable trailing slash for GitHub Pages
   trailingSlash: true,

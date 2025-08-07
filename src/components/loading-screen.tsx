@@ -38,13 +38,16 @@ export default function LoadingScreen() {
             variant="h4"
             component="h1"
             sx={{
-              fontWeight: 500,
-              color: theme.palette.text.primary,
+              fontWeight: 600,
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
               letterSpacing: '0.5px',
               mb: 1,
             }}
           >
-            iBudget
+            RainbowMedia
           </Typography>
         </Box>
 
@@ -74,7 +77,7 @@ export default function LoadingScreen() {
               fontWeight: 400,
             }}
           >
-            Please wait while we loading...
+            Initializing your music experience...
           </Typography>
         </Box>
       </Box>

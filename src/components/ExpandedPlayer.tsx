@@ -117,11 +117,12 @@ const ExpandedPlayer: React.FC = () => {
     >
       <Box
         sx={{
-          height: '100%',
+          height: '100vh',
           display: 'flex',
           flexDirection: 'column',
           background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.02)} 0%, ${theme.palette.background.paper} 20%)`,
           position: 'relative',
+          overflow: 'hidden',
         }}
       >
         {/* Header */}
@@ -129,7 +130,11 @@ const ExpandedPlayer: React.FC = () => {
           direction="row"
           alignItems="center"
           justifyContent="space-between"
-          sx={{ p: 3, pb: 2 }}
+          sx={{
+            p: { xs: 2, sm: 3 },
+            pb: { xs: 1, sm: 2 },
+            flexShrink: 0,
+          }}
         >
           <IconButton
             onClick={handleClose}
@@ -174,21 +179,23 @@ const ExpandedPlayer: React.FC = () => {
         {/* Album Art */}
         <Box
           sx={{
-            flex: 1,
+            flex: { xs: 0.8, sm: 1 },
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            px: 4,
-            py: 2,
+            px: { xs: 2, sm: 4 },
+            py: { xs: 1, sm: 2 },
+            minHeight: { xs: '200px', sm: '300px' },
+            maxHeight: { xs: '250px', sm: '400px' },
           }}
         >
           <Paper
             elevation={0}
             sx={{
-              width: '85%',
-              maxWidth: 320,
+              width: { xs: '90%', sm: '85%' },
+              maxWidth: { xs: 240, sm: 320 },
               aspectRatio: '1',
-              borderRadius: 6,
+              borderRadius: { xs: 4, sm: 6 },
               overflow: 'hidden',
               background: state.currentTrack.coverUrl
                 ? `url(${state.currentTrack.coverUrl}) center/cover`
@@ -224,7 +231,7 @@ const ExpandedPlayer: React.FC = () => {
                     textShadow: '0 2px 4px rgba(0,0,0,0.3)',
                   }}
                 >
-                  {state.currentTrack.title}
+                  {state.currentTrack.title || 'Unknown Title'}
                 </Typography>
               </Stack>
             )}
@@ -235,13 +242,14 @@ const ExpandedPlayer: React.FC = () => {
         <Paper
           elevation={0}
           sx={{
-            mx: 3,
-            mb: 3,
-            p: 3,
+            mx: { xs: 2, sm: 3 },
+            mb: { xs: 2, sm: 3 },
+            p: { xs: 2, sm: 3 },
             borderRadius: 4,
             bgcolor: alpha(theme.palette.background.paper, 0.8),
             backdropFilter: 'blur(10px)',
             border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            flexShrink: 0,
           }}
         >
           <Typography
@@ -252,6 +260,7 @@ const ExpandedPlayer: React.FC = () => {
               textAlign: 'center',
               mb: 1,
               lineHeight: 1.2,
+              fontSize: { xs: '1.1rem', sm: '1.5rem' },
             }}
           >
             {state.currentTrack.title}
@@ -261,15 +270,22 @@ const ExpandedPlayer: React.FC = () => {
             sx={{
               color: theme.palette.text.secondary,
               textAlign: 'center',
-              mb: 3,
+              mb: { xs: 2, sm: 3 },
               fontWeight: 500,
+              fontSize: { xs: '0.9rem', sm: '1rem' },
             }}
           >
-            {state.currentTrack.artist}
+            {state.currentTrack.artist || 'Unknown Artist'}
           </Typography>
 
           {/* Action Buttons */}
-          <Stack direction="row" spacing={4} justifyContent="center" alignItems="center">
+          <Stack
+            direction="row"
+            spacing={{ xs: 2, sm: 4 }}
+            justifyContent="center"
+            alignItems="center"
+            sx={{ flexWrap: 'wrap', gap: 1 }}
+          >
             <Paper
               elevation={0}
               sx={{
@@ -368,13 +384,14 @@ const ExpandedPlayer: React.FC = () => {
         <Paper
           elevation={0}
           sx={{
-            mx: 3,
-            mb: 2,
-            p: 3,
+            mx: { xs: 2, sm: 3 },
+            mb: { xs: 1.5, sm: 2 },
+            p: { xs: 2, sm: 3 },
             borderRadius: 4,
             bgcolor: alpha(theme.palette.background.paper, 0.6),
             backdropFilter: 'blur(10px)',
             border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            flexShrink: 0,
           }}
         >
           <Slider
@@ -433,18 +450,26 @@ const ExpandedPlayer: React.FC = () => {
         <Paper
           elevation={0}
           sx={{
-            mx: 3,
-            mb: 3,
-            p: 3,
+            mx: { xs: 2, sm: 3 },
+            mb: { xs: 2, sm: 3 },
+            p: { xs: 2, sm: 3 },
             borderRadius: 4,
             bgcolor: alpha(theme.palette.background.paper, 0.8),
             backdropFilter: 'blur(10px)',
             border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            flexShrink: 0,
           }}
         >
-          <Stack direction="row" spacing={2} justifyContent="center" alignItems="center">
+          <Stack
+            direction="row"
+            spacing={{ xs: 1, sm: 2 }}
+            justifyContent="center"
+            alignItems="center"
+            sx={{ flexWrap: 'nowrap', gap: { xs: 0.5, sm: 1 } }}
+          >
             <IconButton
               onClick={toggleShuffle}
+              size="medium"
               sx={{
                 color: state.isShuffled ? theme.palette.primary.main : theme.palette.text.secondary,
                 bgcolor: state.isShuffled ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
@@ -455,17 +480,18 @@ const ExpandedPlayer: React.FC = () => {
                 },
               }}
             >
-              <Shuffle />
+              <Shuffle sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />
             </IconButton>
 
             <IconButton
               onClick={previousTrack}
+              size="medium"
               sx={{
                 color: theme.palette.text.primary,
                 '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.08) },
               }}
             >
-              <SkipPrevious sx={{ fontSize: '2rem' }} />
+              <SkipPrevious sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }} />
             </IconButton>
 
             {state.isLoading || state.isBuffering ? (
@@ -475,8 +501,8 @@ const ExpandedPlayer: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: 72,
-                  height: 72,
+                  width: { xs: 56, sm: 72 },
+                  height: { xs: 56, sm: 72 },
                   borderRadius: '50%',
                   bgcolor: theme.palette.primary.main,
                   boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.4)}`,
@@ -496,8 +522,8 @@ const ExpandedPlayer: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: 72,
-                  height: 72,
+                  width: { xs: 56, sm: 72 },
+                  height: { xs: 56, sm: 72 },
                   borderRadius: '50%',
                   bgcolor: theme.palette.primary.main,
                   cursor: 'pointer',
@@ -512,25 +538,37 @@ const ExpandedPlayer: React.FC = () => {
                 onClick={handlePlayPause}
               >
                 {state.isPlaying ? (
-                  <Pause sx={{ fontSize: '2rem', color: theme.palette.primary.contrastText }} />
+                  <Pause
+                    sx={{
+                      fontSize: { xs: '1.5rem', sm: '2rem' },
+                      color: theme.palette.primary.contrastText,
+                    }}
+                  />
                 ) : (
-                  <PlayArrow sx={{ fontSize: '2rem', color: theme.palette.primary.contrastText }} />
+                  <PlayArrow
+                    sx={{
+                      fontSize: { xs: '1.5rem', sm: '2rem' },
+                      color: theme.palette.primary.contrastText,
+                    }}
+                  />
                 )}
               </Paper>
             )}
 
             <IconButton
               onClick={nextTrack}
+              size="medium"
               sx={{
                 color: theme.palette.text.primary,
                 '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.08) },
               }}
             >
-              <SkipNext sx={{ fontSize: '2rem' }} />
+              <SkipNext sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }} />
             </IconButton>
 
             <IconButton
               onClick={toggleRepeat}
+              size="medium"
               sx={{
                 color: state.isRepeated ? theme.palette.primary.main : theme.palette.text.secondary,
                 bgcolor: state.isRepeated ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
@@ -541,7 +579,7 @@ const ExpandedPlayer: React.FC = () => {
                 },
               }}
             >
-              <Repeat />
+              <Repeat sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />
             </IconButton>
           </Stack>
         </Paper>
