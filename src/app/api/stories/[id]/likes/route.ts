@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { FirestoreLikeService } from '@/services/firestore-stories';
+import { ClientFirestoreService } from '@/services/client-firestore';
 
 // GET /api/stories/[id]/likes - Get likes for a story
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    const userId = searchParams.get('userId'); // Get userId from query params
 
-    const result = await FirestoreLikeService.getStoryLikes(id, userId || undefined);
+    const result = await ClientFirestoreService.getStoryLikes(id, userId || undefined);
 
     return NextResponse.json({
       storyId: id,
@@ -28,19 +28,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id: storyId } = await params;
     const { userId, userName } = await request.json();
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    if (!userId || !userName) {
+      return NextResponse.json({ error: 'Missing userId or userName' }, { status: 400 });
     }
 
-    if (!userName) {
-      return NextResponse.json({ error: 'User name is required' }, { status: 400 });
-    }
+    const storyTitle = 'Story'; // Simplified
 
-    // Get story title for the user likes document
-    // In a real app, you might want to get this from the story document
-    const storyTitle = 'Unknown Story'; // Could fetch from Firestore if needed
-
-    const result = await FirestoreLikeService.toggleStoryLike(
+    const result = await ClientFirestoreService.toggleStoryLike(
       storyId,
       userId,
       userName,

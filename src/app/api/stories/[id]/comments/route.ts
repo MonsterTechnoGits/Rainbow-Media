@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { FirestoreCommentService } from '@/services/firestore-stories';
+import { ClientFirestoreService } from '@/services/client-firestore';
 
 // GET /api/stories/[id]/comments - Get comments for a story
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const limitNum = limit ? parseInt(limit) : 20;
 
-    const result = await FirestoreCommentService.getStoryComments(id, {
+    const result = await ClientFirestoreService.getStoryComments(id, {
       limit: limitNum,
     });
 
@@ -35,13 +35,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: storyId } = await params;
-    const { userId, userName, userAvatar, content } = await request.json();
 
+    const { userId, userName, userAvatar, content } = await request.json();
     if (!userId || !userName || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const result = await FirestoreCommentService.addComment(
+    const result = await ClientFirestoreService.addComment(
       storyId,
       userId,
       userName,

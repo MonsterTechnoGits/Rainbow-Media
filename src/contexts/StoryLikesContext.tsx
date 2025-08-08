@@ -10,9 +10,9 @@ interface StoryLikesContextType {
   getStoryLike: (storyId: string) => {
     likeCount: number;
     isLiked: boolean;
-    isUpdating: boolean;
   };
   toggleLike: (storyId: string) => Promise<void>;
+  isPending: boolean;
 }
 
 const StoryLikesContext = createContext<StoryLikesContextType | undefined>(undefined);

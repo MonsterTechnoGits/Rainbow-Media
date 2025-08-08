@@ -11,7 +11,7 @@ export default function UploadButton() {
   const router = useRouter();
 
   const handleUploadClick = () => {
-    router.push('/upload');
+    router.push('/admin/upload');
   };
 
   return (

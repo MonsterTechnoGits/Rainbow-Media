@@ -1,7 +1,7 @@
 'use client';
 
 import { Box, Container, Typography, Button } from '@mui/material';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 import ClientOnly from '@/components/ClientOnly';
 import CommentDrawer from '@/components/CommentDrawer';
@@ -57,8 +57,9 @@ export default function HomePageView() {
     setSearchQuery(query);
   };
 
-  const stories = ((storiesResponse?.data as { stories: AudioStory[] })?.stories ||
-    []) as AudioStory[];
+  const stories = useMemo(() => {
+    return ((storiesResponse?.data as { stories: AudioStory[] })?.stories || []) as AudioStory[];
+  }, [storiesResponse]);
 
   // Initialize like states when stories are loaded
   useEffect(() => {

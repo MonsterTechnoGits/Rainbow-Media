@@ -1,18 +1,39 @@
 import axios, { AxiosResponse } from 'axios';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 import { AudioStory } from '@/types/audio-story';
 
-// Base API configuration
-const API_BASE_URL = '/api';
-
-// Configure axios instance
+function waitForAuthInit(): Promise<string | null> {
+  const auth = getAuth();
+  return new Promise((resolve) => {
+    if (auth.currentUser) {
+      auth.currentUser.getIdToken().then(resolve);
+    } else {
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        unsubscribe();
+        if (user) {
+          resolve(await user.getIdToken());
+        } else {
+          resolve(null);
+        }
+      });
+    }
+  });
+}
+// Simple axios instance without authentication
 const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
 });
-
+apiClient.interceptors.request.use(async (config) => {
+  const token = await waitForAuthInit();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 // Helper function for API calls
 async function apiCall<T>(
   endpoint: string,
@@ -23,7 +44,6 @@ async function apiCall<T>(
   }
 ): Promise<AxiosResponse<T>> {
   const { method = 'GET', data, params } = options || {};
-
   return apiClient.request<T>({
     url: endpoint,
     method,
@@ -99,7 +119,8 @@ export const storyApi = {
   // Toggle story like
   async toggleStoryLike(
     storyId: string,
-    userId: string
+    userId: string,
+    userName: string
   ): Promise<
     AxiosResponse<{
       storyId: string;
@@ -109,7 +130,7 @@ export const storyApi = {
   > {
     return apiCall(`/stories/${storyId}/likes`, {
       method: 'POST',
-      data: { userId },
+      data: { userId, userName },
     });
   },
 
@@ -222,6 +243,120 @@ export const paymentApi = {
   },
 };
 
+// Admin API calls
+export const adminApi = {
+  // Get story for editing
+  async getStory(id: string): Promise<AxiosResponse<{ story: AudioStory }>> {
+    return apiCall(`/admin/stories/${id}`, {
+      method: 'GET',
+    });
+  },
+
+  // Update story
+  async updateStory(
+    id: string,
+    data: {
+      title: string;
+      series: string;
+      description?: string;
+      creator?: string;
+      isPaid: boolean;
+      price?: number;
+      currency: string;
+      genre: string;
+      genres?: string[];
+      license?: string;
+      rightsOwner?: string;
+      isExplicit?: boolean;
+      episodeNumber?: number;
+      storyType?: string;
+      duration?: number;
+      coverUrl?: string;
+    }
+  ): Promise<AxiosResponse<{ success: boolean; story: AudioStory }>> {
+    return apiCall(`/admin/stories/${id}`, {
+      method: 'PUT',
+      data,
+    });
+  },
+
+  // Delete story
+  async deleteStory(id: string): Promise<AxiosResponse<{ success: boolean }>> {
+    return apiCall(`/admin/stories/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// Upload API calls
+export const uploadApi = {
+  // Upload complete story with audio and cover
+  async uploadStory(formData: FormData): Promise<
+    AxiosResponse<{
+      success: boolean;
+      message: string;
+      story?: AudioStory;
+    }>
+  > {
+    // For FormData, we need to use a different approach
+    const user = getAuth().currentUser;
+    let token = '';
+    if (user) {
+      token = await user.getIdToken();
+    }
+
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      headers: {
+        Authorization: token ? `Bearer ${token}` : '',
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    return {
+      data,
+      status: response.status,
+      statusText: response.statusText,
+      headers: {} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      config: {} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      request: {} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    };
+  },
+
+  // Upload cover image only
+  async uploadCoverImage(formData: FormData): Promise<
+    AxiosResponse<{
+      coverUrl: string;
+    }>
+  > {
+    // For FormData, we need to use a different approach
+    const user = getAuth().currentUser;
+    let token = '';
+    if (user) {
+      token = await user.getIdToken();
+    }
+
+    const response = await fetch('/api/upload-simple', {
+      method: 'POST',
+      headers: {
+        Authorization: token ? `Bearer ${token}` : '',
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    return {
+      data,
+      status: response.status,
+      statusText: response.statusText,
+      headers: {} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      config: {} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      request: {} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    };
+  },
+};
+
 // Backward compatibility
 export const trackApi = storyApi;
 
@@ -230,4 +365,6 @@ export default {
   track: storyApi, // Backward compatibility
   user: userApi,
   payment: paymentApi,
+  admin: adminApi,
+  upload: uploadApi,
 };

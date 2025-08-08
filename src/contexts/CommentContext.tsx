@@ -1,6 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useCallback,
+  useOptimistic,
+  useTransition,
+} from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/use-api-query-hook';
@@ -20,6 +27,7 @@ interface CommentContextType {
     storyId: string,
     storyData?: { likeCount: number; isLiked?: boolean }
   ) => Promise<void>;
+  isPending: boolean; // Add pending state for transitions
 }
 
 type CommentAction =
@@ -30,6 +38,10 @@ type CommentAction =
   | { type: 'LIKE_COMMENT'; payload: { commentId: string; storyId: string } }
   | { type: 'SET_STORY_LIKE'; payload: { storyId: string; like: StoryLike } }
   | { type: 'LIKE_STORY'; payload: { storyId: string } };
+
+type OptimisticCommentAction =
+  | { type: 'ADD_COMMENT'; storyId: string; comment: Comment }
+  | { type: 'LIKE_STORY'; storyId: string };
 
 const initialState: CommentState = {
   comments: {},
@@ -132,8 +144,47 @@ const commentReducer = (state: CommentState, action: CommentAction): CommentStat
 
 const CommentContext = createContext<CommentContextType | undefined>(undefined);
 
+const optimisticReducer = (state: CommentState, action: OptimisticCommentAction): CommentState => {
+  switch (action.type) {
+    case 'ADD_COMMENT': {
+      const existingComments = state.comments[action.storyId] || [];
+      return {
+        ...state,
+        comments: {
+          ...state.comments,
+          [action.storyId]: [action.comment, ...existingComments],
+        },
+      };
+    }
+    case 'LIKE_STORY': {
+      const currentLike = state.storyLikes[action.storyId] || {
+        storyId: action.storyId,
+        likeCount: 0,
+        isLiked: false,
+      };
+      return {
+        ...state,
+        storyLikes: {
+          ...state.storyLikes,
+          [action.storyId]: {
+            storyId: action.storyId,
+            likeCount: currentLike.isLiked
+              ? Math.max(0, currentLike.likeCount - 1)
+              : currentLike.likeCount + 1,
+            isLiked: !currentLike.isLiked,
+          },
+        },
+      };
+    }
+    default:
+      return state;
+  }
+};
+
 export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(commentReducer, initialState);
+  const [optimisticState, updateOptimisticState] = useOptimistic(state, optimisticReducer);
+  const [isPending, startTransition] = useTransition();
   const { user } = useAuth();
   const { useApiMutation } = useApi();
 
@@ -170,8 +221,27 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
             isLiked: storyData.isLiked || false,
           };
           dispatch({ type: 'SET_STORY_LIKE', payload: { storyId, like: storyLike } });
+        } else if (user?.uid) {
+          // Get like status from API
+          try {
+            const likeResponse = await storyApi.getStoryLikes(storyId, user.uid);
+            const storyLike: StoryLike = {
+              storyId,
+              likeCount: likeResponse.data.likeCount,
+              isLiked: likeResponse.data.isLiked,
+            };
+            dispatch({ type: 'SET_STORY_LIKE', payload: { storyId, like: storyLike } });
+          } catch (error) {
+            console.error('Failed to load story likes:', error);
+            const storyLike: StoryLike = {
+              storyId,
+              likeCount: 0,
+              isLiked: false,
+            };
+            dispatch({ type: 'SET_STORY_LIKE', payload: { storyId, like: storyLike } });
+          }
         } else {
-          // For now, set default like data to avoid API calls
+          // No user, set default like data
           const storyLike: StoryLike = {
             storyId,
             likeCount: 0,
@@ -231,50 +301,70 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     async (storyId: string, text: string) => {
       if (!user) return;
 
-      try {
-        const commentData = {
-          userId: user.uid,
-          userName: user.displayName || 'Anonymous User',
-          userAvatar: user.photoURL,
-          content: text,
-        };
+      // Create optimistic comment
+      const optimisticComment: Comment = {
+        id: `temp-${Date.now()}`,
+        storyId,
+        userId: user.uid,
+        username: user.displayName || user.email?.split('@')[0] || 'Anonymous',
+        userAvatar: user.photoURL || '',
+        text,
+        timestamp: Date.now(),
+        likes: 0,
+        isLiked: false,
+      };
 
-        const response = await addCommentMutation.mutateAsync({ storyId, comment: commentData });
+      startTransition(async () => {
+        // Apply optimistic update immediately
+        updateOptimisticState({ type: 'ADD_COMMENT', storyId, comment: optimisticComment });
 
-        // Transform API comment to our format
-        const responseData = response.data as {
-          success: boolean;
-          comment: {
-            id: string;
-            userId: string;
-            userName: string;
-            userAvatar: string;
-            content: string;
-            timestamp: number;
-            likes: number;
-            replies: unknown[];
+        try {
+          const commentData = {
+            userId: user.uid,
+            userName: optimisticComment.username,
+            userAvatar: user.photoURL,
+            content: text,
           };
-          totalComments: number;
-        };
 
-        const newComment: Comment = {
-          id: responseData.comment.id,
-          storyId,
-          userId: responseData.comment.userId,
-          username: responseData.comment.userName,
-          userAvatar: responseData.comment.userAvatar,
-          text: responseData.comment.content,
-          timestamp: responseData.comment.timestamp,
-          likes: responseData.comment.likes,
-          isLiked: false,
-        };
+          const response = await addCommentMutation.mutateAsync({ storyId, comment: commentData });
 
-        dispatch({ type: 'ADD_COMMENT', payload: { storyId, comment: newComment } });
-      } catch (error) {
-        console.error('Failed to add comment:', error);
-      }
+          // Transform API comment to our format
+          const responseData = response.data as {
+            success: boolean;
+            comment: {
+              id: string;
+              userId: string;
+              userName: string;
+              userAvatar: string;
+              content: string;
+              timestamp: number;
+              likes: number;
+              replies: unknown[];
+            };
+            totalComments: number;
+          };
+
+          const serverComment: Comment = {
+            id: responseData.comment.id,
+            storyId,
+            userId: responseData.comment.userId,
+            username: responseData.comment.userName,
+            userAvatar: responseData.comment.userAvatar,
+            text: responseData.comment.content,
+            timestamp: responseData.comment.timestamp,
+            likes: responseData.comment.likes,
+            isLiked: false,
+          };
+
+          // Update actual state with server response
+          dispatch({ type: 'ADD_COMMENT', payload: { storyId, comment: serverComment } });
+        } catch (error) {
+          console.error('Failed to add comment:', error);
+          // React will automatically revert the optimistic update on error
+        }
+      });
     },
-    [user, addCommentMutation]
+    [user, addCommentMutation, updateOptimisticState, startTransition]
   );
 
   const likeComment = useCallback((commentId: string, storyId: string) => {
@@ -283,8 +373,12 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const likeStoryMutation = useApiMutation({
     mutationFn: (variables: unknown) => {
-      const { storyId, userId } = variables as { storyId: string; userId: string };
-      return storyApi.toggleStoryLike(storyId, userId);
+      const { storyId, userId, userName } = variables as {
+        storyId: string;
+        userId: string;
+        userName: string;
+      };
+      return storyApi.toggleStoryLike(storyId, userId, userName);
     },
   });
 
@@ -292,53 +386,62 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     async (storyId: string) => {
       if (!user) return;
 
-      try {
-        const response = await likeStoryMutation.mutateAsync({ storyId, userId: user.uid });
+      startTransition(async () => {
+        // Apply optimistic update immediately
+        updateOptimisticState({ type: 'LIKE_STORY', storyId });
 
-        const responseData = response.data as {
-          storyId: string;
-          likeCount: number;
-          isLiked: boolean;
-        };
+        try {
+          const response = await likeStoryMutation.mutateAsync({
+            storyId,
+            userId: user.uid,
+            userName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
+          });
 
-        const storyLike: StoryLike = {
-          storyId,
-          likeCount: responseData.likeCount,
-          isLiked: responseData.isLiked,
-        };
+          const responseData = response.data as {
+            storyId: string;
+            likeCount: number;
+            isLiked: boolean;
+          };
 
-        dispatch({ type: 'SET_STORY_LIKE', payload: { storyId, like: storyLike } });
-      } catch (error) {
-        console.error('Failed to toggle story like:', error);
-        // Fallback to optimistic update
-        dispatch({ type: 'LIKE_STORY', payload: { storyId } });
-      }
+          const storyLike: StoryLike = {
+            storyId,
+            likeCount: responseData.likeCount,
+            isLiked: responseData.isLiked,
+          };
+
+          // Update actual state with server response
+          dispatch({ type: 'SET_STORY_LIKE', payload: { storyId, like: storyLike } });
+        } catch (error) {
+          console.error('Failed to toggle story like:', error);
+          // React will automatically revert the optimistic update on error
+        }
+      });
     },
-    [user, likeStoryMutation]
+    [user, likeStoryMutation, updateOptimisticState, startTransition]
   );
 
   const getStoryComments = useCallback(
     (storyId: string): Comment[] => {
-      return state.comments[storyId] || [];
+      return optimisticState.comments[storyId] || [];
     },
-    [state.comments]
+    [optimisticState.comments]
   );
 
   const getStoryLike = useCallback(
     (storyId: string): StoryLike => {
       return (
-        state.storyLikes[storyId] || {
+        optimisticState.storyLikes[storyId] || {
           storyId,
           likeCount: 0,
           isLiked: false,
         }
       );
     },
-    [state.storyLikes]
+    [optimisticState.storyLikes]
   );
 
   const value: CommentContextType = {
-    state,
+    state: optimisticState, // Use optimistic state for UI
     openComments,
     closeComments,
     addComment,
@@ -347,6 +450,7 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     getStoryComments,
     getStoryLike,
     loadStoryData,
+    isPending,
   };
 
   return <CommentContext.Provider value={value}>{children}</CommentContext.Provider>;

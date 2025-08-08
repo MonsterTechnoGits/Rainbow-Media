@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-import { auth } from '@/lib/firebase';
+import { getAuthInstance } from '@/lib/firebase';
 import { userService, purchaseService } from '@/services/firestore-user';
 import { User } from '@/types/audio-story';
 
@@ -50,7 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithGoogle = async () => {
-    if (!auth) throw new Error('Firebase not initialized');
+    if (!getAuthInstance()) throw new Error('Firebase not initialized');
 
     try {
       const provider = new GoogleAuthProvider();
@@ -59,14 +59,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       provider.addScope('email');
       provider.addScope('profile');
 
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(getAuthInstance(), provider);
       const userData = await createUserDocument(result.user);
       setUser(userData);
     } catch (error: unknown) {
       console.error('Error signing in with Google:', error);
       const firebaseError = error as { code?: string; message?: string };
 
-      if (firebaseError.code === 'auth/unauthorized-domain') {
+      if (firebaseError.code === 'getAuthInstance()/unauthorized-domain') {
         throw new Error('This domain is not authorized for Google Sign-In.');
       }
 
@@ -75,10 +75,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    if (!auth) throw new Error('Firebase not initialized');
+    if (!getAuthInstance()) throw new Error('Firebase not initialized');
 
     try {
-      await firebaseSignOut(auth);
+      await firebaseSignOut(getAuthInstance());
       setUser(null);
       setFirebaseUser(null);
     } catch (error) {
@@ -110,13 +110,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // Skip authentication setup if Firebase is not available (during build)
-    if (!auth) {
+    if (!getAuthInstance()) {
       setLoading(false);
       return;
     }
 
     // Check for redirect result first
-    getRedirectResult(auth)
+    getRedirectResult(getAuthInstance())
       .then(async (result) => {
         if (result?.user) {
           console.log('Redirect sign-in successful');
@@ -128,7 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Redirect sign-in error:', error);
       });
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(getAuthInstance(), async (firebaseUser) => {
       setLoading(true);
       if (firebaseUser) {
         setFirebaseUser(firebaseUser);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useOptimistic, useTransition } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/use-api-query-hook';
@@ -11,16 +11,39 @@ interface StoryLikeState {
   [storyId: string]: {
     likeCount: number;
     isLiked: boolean;
-    isUpdating: boolean;
   };
 }
 
+type OptimisticAction = {
+  type: 'toggle';
+  storyId: string;
+};
+
 /**
  * Efficient story likes hook that minimizes API calls
- * Uses optimistic updates and caches state locally
+ * Uses React 19 optimistic updates for instant UI feedback
  */
 export const useStoryLikes = () => {
   const [likeStates, setLikeStates] = useState<StoryLikeState>({});
+  const [optimisticLikes, updateOptimisticLikes] = useOptimistic(
+    likeStates,
+    (state: StoryLikeState, action: OptimisticAction) => {
+      if (action.type === 'toggle') {
+        const current = state[action.storyId];
+        if (!current) return state;
+
+        return {
+          ...state,
+          [action.storyId]: {
+            likeCount: current.isLiked ? Math.max(0, current.likeCount - 1) : current.likeCount + 1,
+            isLiked: !current.isLiked,
+          },
+        };
+      }
+      return state;
+    }
+  );
+  const [isPending, startTransition] = useTransition();
   const { user } = useAuth();
   const { useApiMutation } = useApi();
 
@@ -31,89 +54,86 @@ export const useStoryLikes = () => {
       newStates[story.id] = {
         likeCount: story.likeCount,
         isLiked: story.isLiked || false,
-        isUpdating: false,
       };
     });
     setLikeStates(newStates);
   }, []);
 
-  // Get like state for a specific story
+  // Get like state for a specific story (uses optimistic state)
   const getStoryLike = useCallback(
     (storyId: string) => {
       return (
-        likeStates[storyId] || {
+        optimisticLikes[storyId] || {
           likeCount: 0,
           isLiked: false,
-          isUpdating: false,
         }
       );
     },
-    [likeStates]
+    [optimisticLikes]
   );
 
   const likeStoryMutation = useApiMutation({
     mutationFn: (variables: unknown) => {
-      const { storyId, userId } = variables as { storyId: string; userId: string };
-      return storyApi.toggleStoryLike(storyId, userId);
+      const { storyId, userId, userName } = variables as {
+        storyId: string;
+        userId: string;
+        userName: string;
+      };
+      return storyApi.toggleStoryLike(storyId, userId, userName);
     },
   });
 
-  // Toggle like with optimistic update
+  // Toggle like with React 19 optimistic updates
   const toggleLike = useCallback(
     async (storyId: string) => {
       if (!user) return;
 
-      const currentState = likeStates[storyId];
-      if (!currentState || currentState.isUpdating) return;
+      const currentState = optimisticLikes[storyId];
+      if (!currentState) return;
 
-      // Optimistic update
-      setLikeStates((prev) => ({
-        ...prev,
-        [storyId]: {
-          likeCount: currentState.isLiked
-            ? Math.max(0, currentState.likeCount - 1)
-            : currentState.likeCount + 1,
-          isLiked: !currentState.isLiked,
-          isUpdating: true,
-        },
-      }));
+      startTransition(async () => {
+        // Apply optimistic update immediately
+        updateOptimisticLikes({ type: 'toggle', storyId });
 
-      try {
-        const response = await likeStoryMutation.mutateAsync({ storyId, userId: user.uid });
+        try {
+          const response = await likeStoryMutation.mutateAsync({
+            storyId,
+            userId: user.uid,
+            userName: user.displayName || 'Anonymous',
+          });
 
-        const responseData = response.data as {
-          storyId: string;
-          likeCount: number;
-          isLiked: boolean;
-        };
+          const responseData = response.data as {
+            storyId: string;
+            likeCount: number;
+            isLiked: boolean;
+          };
 
-        // Update with server response
-        setLikeStates((prev) => ({
-          ...prev,
-          [storyId]: {
-            likeCount: responseData.likeCount,
-            isLiked: responseData.isLiked,
-            isUpdating: false,
-          },
-        }));
-      } catch (error) {
-        console.error('Failed to toggle story like:', error);
-        // Revert optimistic update on error
-        setLikeStates((prev) => ({
-          ...prev,
-          [storyId]: {
-            ...currentState,
-            isUpdating: false,
-          },
-        }));
-      }
+          // Update actual state with server response
+          setLikeStates((prev) => ({
+            ...prev,
+            [storyId]: {
+              likeCount: responseData.likeCount,
+              isLiked: responseData.isLiked,
+            },
+          }));
+        } catch (error) {
+          console.error('Failed to toggle story like:', error);
+          // React will automatically revert the optimistic update on error
+          // but we should also reset our base state
+          setLikeStates((prev) => ({
+            ...prev,
+            [storyId]: currentState,
+          }));
+        }
+      });
     },
-    [user, likeStates, likeStoryMutation]
+    [user, optimisticLikes, updateOptimisticLikes, startTransition, likeStoryMutation]
   );
 
   return {
     initializeLikes,
     getStoryLike,
     toggleLike,
+    isPending, // Expose pending state for UI feedback
   };
 };

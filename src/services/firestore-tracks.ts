@@ -18,7 +18,7 @@ import {
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 
-import { db } from '@/lib/firebase';
+import { getDbInstance } from '@/lib/firebase';
 import { MusicTrack } from '@/types/music';
 
 // Read count monitoring for development
@@ -50,12 +50,12 @@ export const resetReadCount = () => {
   readCountMonitor.operations = [];
 };
 
-// Guard function to ensure db is initialized
+// Guard function to ensure getDbInstance() is initialized
 function getDb(): Firestore {
-  if (!db) {
+  if (!getDbInstance()) {
     throw new Error('Firestore is not initialized. Please check your Firebase configuration.');
   }
-  return db;
+  return getDbInstance();
 }
 
 // Types for Firestore documents
@@ -111,7 +111,7 @@ export interface FirestoreComment {
   trackId_createdAt: string; // Composite field for efficient sorting
 }
 
-// Collection references - using functions to handle null db
+// Collection references - using functions to handle null getDbInstance()
 const getTracksCollection = () => collection(getDb(), 'tracks');
 const getUserLikesCollection = () => collection(getDb(), 'user-likes');
 const getTrackLikesCollection = () => collection(getDb(), 'track-likes');

@@ -1,15 +1,15 @@
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
-import { db } from '@/lib/firebase';
+import { getDbInstance } from '@/lib/firebase';
 import { User, PurchaseDetails } from '@/types/audio-story';
 
 // User service functions
 export const userService = {
   // Get user data by UID
   async getUser(uid: string): Promise<User | null> {
-    if (!db) throw new Error('Firebase not initialized');
+    if (!getDbInstance()) throw new Error('Firebase not initialized');
 
-    const userRef = doc(db, 'users', uid);
+    const userRef = doc(getDbInstance(), 'users', uid);
     const userSnap = await getDoc(userRef);
 
     if (!userSnap.exists()) {
@@ -21,9 +21,9 @@ export const userService = {
 
   // Create or get existing user
   async createUser(userData: User): Promise<User> {
-    if (!db) throw new Error('Firebase not initialized');
+    if (!getDbInstance()) throw new Error('Firebase not initialized');
 
-    const userRef = doc(db, 'users', userData.uid);
+    const userRef = doc(getDbInstance(), 'users', userData.uid);
     const userSnap = await getDoc(userRef);
 
     if (!userSnap.exists()) {
@@ -49,9 +49,9 @@ export const userService = {
 export const purchaseService = {
   // Add purchase to user account
   async addPurchase(uid: string, trackId: string, updatedUser: User): Promise<User> {
-    if (!db) throw new Error('Firebase not initialized');
+    if (!getDbInstance()) throw new Error('Firebase not initialized');
 
-    const userRef = doc(db, 'users', uid);
+    const userRef = doc(getDbInstance(), 'users', uid);
     await setDoc(userRef, updatedUser, { merge: true });
     return updatedUser;
   },
@@ -65,9 +65,9 @@ export const purchaseService = {
       paymentId: string;
     }
   ): Promise<string> {
-    if (!db) throw new Error('Firebase not initialized');
+    if (!getDbInstance()) throw new Error('Firebase not initialized');
 
-    const purchaseRef = doc(db, 'purchases', purchaseData.paymentId);
+    const purchaseRef = doc(getDbInstance(), 'purchases', purchaseData.paymentId);
     await setDoc(purchaseRef, purchaseData);
     return purchaseData.paymentId;
   },

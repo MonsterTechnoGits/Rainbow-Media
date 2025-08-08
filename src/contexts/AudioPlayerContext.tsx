@@ -437,7 +437,7 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
 
     audio.src = audioUrl;
-    audio.preload = 'auto'; // Enable preloading
+    audio.preload = 'metadata'; // Only preload metadata for streaming
     audio.load(); // Start loading the audio
   }, [state.currentStory]);
 
@@ -472,7 +472,38 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   return (
     <AudioPlayerContext.Provider value={value}>
       {children}
-      <audio ref={audioRef} preload="auto" crossOrigin="anonymous" />
+      <audio
+        ref={audioRef}
+        preload="metadata"
+        crossOrigin="anonymous"
+        // Optimize for streaming
+        onLoadStart={() => dispatch({ type: 'SET_LOADING', payload: true })}
+        onProgress={() => {
+          // Update buffering status based on buffered ranges
+          if (audioRef.current) {
+            const audio = audioRef.current;
+            const buffered = audio.buffered;
+            const currentTime = audio.currentTime;
+
+            if (buffered.length > 0) {
+              // Check if current position is buffered
+              let isBuffered = false;
+              for (let i = 0; i < buffered.length; i++) {
+                if (currentTime >= buffered.start(i) && currentTime <= buffered.end(i)) {
+                  isBuffered = true;
+                  break;
+                }
+              }
+
+              // Set buffering state if we're near the end of buffered content
+              const needsBuffering =
+                !isBuffered ||
+                (buffered.length > 0 && currentTime + 5 > buffered.end(buffered.length - 1));
+              dispatch({ type: 'SET_BUFFERING', payload: needsBuffering && state.isPlaying });
+            }
+          }
+        }}
+      />
     </AudioPlayerContext.Provider>
   );
 };

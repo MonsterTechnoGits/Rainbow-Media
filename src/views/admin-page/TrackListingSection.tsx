@@ -1,6 +1,6 @@
 'use client';
 
-import { PlayArrow, Search, Visibility } from '@mui/icons-material';
+import { PlayArrow, Search, Visibility, Edit, Delete } from '@mui/icons-material';
 import {
   Box,
   Paper,
@@ -21,11 +21,20 @@ import {
   Stack,
   TextField,
   InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
 import Iconify from '@/components/iconify';
 import { formatDuration } from '@/data/storyData';
+import { useApi } from '@/hooks/use-api-query-hook';
+import { adminApi } from '@/services/api';
 import { FirestoreStoryService } from '@/services/firestore-stories';
 import { AudioStory } from '@/types/audio-story';
 
@@ -34,12 +43,20 @@ interface StoryListingSectionProps {}
 
 const StoryListingSection: React.FC<StoryListingSectionProps> = () => {
   const theme = useTheme();
+  const { useApiMutation } = useApi();
   const [stories, setStories] = useState<AudioStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStory, setSelectedStory] = useState<AudioStory | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [storyToDelete, setStoryToDelete] = useState<AudioStory | null>(null);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error';
+  }>({ open: false, message: '', severity: 'success' });
 
   const storiesPerPage = 10;
 
@@ -81,6 +98,52 @@ const StoryListingSection: React.FC<StoryListingSectionProps> = () => {
     const value = event.target.value;
     setSearchQuery(value);
     setCurrentPage(1); // Reset to first page when searching
+  };
+
+  const handleEditStory = (story: AudioStory) => {
+    // Navigate to full edit page instead of dialog
+    window.location.href = `/admin/edit/${story.id}`;
+  };
+
+  const handleDeleteStory = (story: AudioStory) => {
+    setStoryToDelete(story);
+    setDeleteDialogOpen(true);
+  };
+
+  const deleteStoryMutation = useApiMutation({
+    mutationFn: (id) => adminApi.deleteStory(id as string),
+    onSuccess: (response) => {
+      const { data } = response;
+      console.log('Delete successful:', data);
+      setSnackbar({
+        open: true,
+        message: `Story "${storyToDelete?.title}" and all related data deleted successfully`,
+        severity: 'success',
+      });
+
+      // Reload stories list
+      loadStories(currentPage, searchQuery);
+
+      setDeleteDialogOpen(false);
+      setStoryToDelete(null);
+    },
+    onError: (error) => {
+      console.error('Error deleting story:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to delete story',
+        severity: 'error',
+      });
+    },
+  });
+
+  const confirmDelete = async () => {
+    if (!storyToDelete) return;
+    deleteStoryMutation.mutate(storyToDelete.id);
+  };
+
+  const closeSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
   if (selectedStory) {
@@ -308,22 +371,56 @@ const StoryListingSection: React.FC<StoryListingSectionProps> = () => {
                       </Stack>
                     </TableCell>
                     <TableCell>
-                      <IconButton
-                        size="small"
-                        sx={{
-                          bgcolor: alpha(theme.palette.primary.main, 0.1),
-                          color: theme.palette.primary.main,
-                          '&:hover': {
-                            bgcolor: alpha(theme.palette.primary.main, 0.2),
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStoryClick(story);
-                        }}
-                      >
-                        <Visibility />
-                      </IconButton>
+                      <Stack direction="row" spacing={1}>
+                        <IconButton
+                          size="small"
+                          sx={{
+                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                            color: theme.palette.primary.main,
+                            '&:hover': {
+                              bgcolor: alpha(theme.palette.primary.main, 0.2),
+                            },
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStoryClick(story);
+                          }}
+                        >
+                          <Visibility fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          sx={{
+                            bgcolor: alpha(theme.palette.warning.main, 0.1),
+                            color: theme.palette.warning.main,
+                            '&:hover': {
+                              bgcolor: alpha(theme.palette.warning.main, 0.2),
+                            },
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditStory(story);
+                          }}
+                        >
+                          <Edit fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          sx={{
+                            bgcolor: alpha(theme.palette.error.main, 0.1),
+                            color: theme.palette.error.main,
+                            '&:hover': {
+                              bgcolor: alpha(theme.palette.error.main, 0.2),
+                            },
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteStory(story);
+                          }}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -383,6 +480,49 @@ const StoryListingSection: React.FC<StoryListingSectionProps> = () => {
           </Typography>
         </Box>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Delete Story</DialogTitle>
+        <DialogContent>
+          <Typography>Are you sure you want to delete "{storyToDelete?.title}"?</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            This action will permanently delete:
+          </Typography>
+          <Box component="ul" sx={{ mt: 1, pl: 2 }}>
+            <li>The story and its audio file</li>
+            <li>All likes and comments</li>
+            <li>Purchase history records</li>
+            <li>All related data</li>
+          </Box>
+          <Typography variant="body2" color="error.main" sx={{ mt: 1, fontWeight: 600 }}>
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={confirmDelete} color="error" variant="contained">
+            Delete Story
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={closeSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={closeSnackbar}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Paper>
   );
 };

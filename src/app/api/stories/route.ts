@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { verifyToken } from '@/lib/verifyToken';
 import { FirestoreStoryService } from '@/services/firestore-stories';
-
 // GET /api/stories - Get all stories with optional search and user likes
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');
     const limit = searchParams.get('limit');
-    const userId = searchParams.get('userId'); // For authenticated requests
+
+    const { decodedToken } = await verifyToken(request);
+
+    // Try to get user from auth token, but don't require it for GET
+    const userId = decodedToken?.uid;
 
     const limitNum = limit ? parseInt(limit) : 20;
 

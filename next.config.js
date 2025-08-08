@@ -8,6 +8,9 @@ const nextConfig = {
     },
   },
 
+  // File upload configuration
+  serverExternalPackages: ['sharp'],
+
   // Cross-origin headers for payment integration
   async headers() {
     return [

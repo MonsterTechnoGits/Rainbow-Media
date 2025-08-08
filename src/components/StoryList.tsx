@@ -1,6 +1,6 @@
 'use client';
 
-import { PlayArrow, Pause, MoreVert, Favorite, Comment as CommentIcon } from '@mui/icons-material';
+import { PlayArrow, Pause, Favorite, Comment as CommentIcon } from '@mui/icons-material';
 import {
   Box,
   List,
@@ -8,7 +8,6 @@ import {
   ListItemText,
   Avatar,
   Typography,
-  IconButton,
   useTheme,
   CircularProgress,
   Stack,
@@ -23,8 +22,6 @@ import Iconify from '@/components/iconify';
 import PaymentDrawer from '@/components/PaymentDrawer';
 import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useComments } from '@/contexts/CommentContext';
-import { useStoryLikesContext } from '@/contexts/StoryLikesContext';
 import { formatDuration } from '@/data/storyData';
 import { AudioStory } from '@/types/audio-story';
 
@@ -47,8 +44,6 @@ const StoryList: React.FC<StoryListProps> = ({ stories }) => {
     cancelAndCloseAll,
   } = useAudioPlayer();
   const { user, hasPurchased } = useAuth();
-  const { openComments } = useComments();
-  const { toggleLike } = useStoryLikesContext();
   const theme = useTheme();
 
   const handleStoryClick = (story: AudioStory) => {
@@ -156,7 +151,7 @@ const StoryList: React.FC<StoryListProps> = ({ stories }) => {
               </Stack>
             </Paper>
           ) : (
-            stories.map((story, index) => {
+            stories.map((story) => {
               const iscurrentStory = state.currentStory?.id === story.id;
               const isPlaying = iscurrentStory && state.isPlaying;
               const isLoading = iscurrentStory && state.isLoading;
@@ -311,7 +306,7 @@ const StoryList: React.FC<StoryListProps> = ({ stories }) => {
                           >
                             {story.title || 'Unknown Title'}
                           </Typography>
-                          <Chip
+                          {/* <Chip
                             label={`${index + 1}`}
                             size="small"
                             sx={{
@@ -323,7 +318,7 @@ const StoryList: React.FC<StoryListProps> = ({ stories }) => {
                               fontWeight: 600,
                               display: { xs: 'none', sm: 'inline-flex' },
                             }}
-                          />
+                          /> */}
                         </Stack>
                       }
                       secondary={
@@ -377,7 +372,6 @@ const StoryList: React.FC<StoryListProps> = ({ stories }) => {
                             >
                               <Paper
                                 elevation={0}
-                                onClick={() => toggleLike(story.id)}
                                 sx={{
                                   px: { xs: 0.5, sm: 0.75 },
                                   py: 0.25,
@@ -424,12 +418,6 @@ const StoryList: React.FC<StoryListProps> = ({ stories }) => {
 
                               <Paper
                                 elevation={0}
-                                onClick={() =>
-                                  openComments(story.id, {
-                                    likeCount: story.likeCount,
-                                    isLiked: story.isLiked,
-                                  })
-                                }
                                 sx={{
                                   px: { xs: 0.5, sm: 0.75 },
                                   py: 0.25,
@@ -467,7 +455,7 @@ const StoryList: React.FC<StoryListProps> = ({ stories }) => {
                       }
                     />
 
-                    <Box
+                    {/* <Box
                       sx={{
                         display: { xs: 'none', sm: 'flex' },
                         alignItems: 'center',
@@ -491,7 +479,7 @@ const StoryList: React.FC<StoryListProps> = ({ stories }) => {
                       >
                         <MoreVert sx={{ fontSize: '0.9rem' }} />
                       </IconButton>
-                    </Box>
+                    </Box> */}
                   </ListItem>
                 </Paper>
               );

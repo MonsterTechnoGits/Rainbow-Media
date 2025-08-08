@@ -18,7 +18,7 @@ import {
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 
-import { db } from '@/lib/firebase';
+import { getDbInstance } from '@/lib/firebase';
 import { AudioStory } from '@/types/audio-story';
 
 // Read count monitoring for development
@@ -52,15 +52,14 @@ export const resetReadCount = () => {
 
 // Guard function to ensure db is initialized
 function getDb(): Firestore {
-  if (!db) {
+  if (!getDbInstance()) {
     throw new Error('Firestore is not initialized. Please check your Firebase configuration.');
   }
-  return db;
+  return getDbInstance();
 }
 
 // Types for Firestore documents
 export interface FirestoreStory {
-  id: string;
   title: string;
   creator: string;
   series: string;
@@ -174,7 +173,7 @@ export class FirestoreStoryService {
 
     const stories = docs.map((doc) => {
       const data = doc.data() as FirestoreStory;
-      return this.convertFirestoreStoryToAudioStory(data);
+      return this.convertFirestoreStoryToAudioStory(data, doc.id);
     });
 
     return {
@@ -189,6 +188,11 @@ export class FirestoreStoryService {
    */
   static async getUserLikes(userId: string): Promise<Set<string>> {
     try {
+      // Skip if no userId provided
+      if (!userId) {
+        return new Set();
+      }
+
       const userLikesDoc = await getDoc(doc(getUserLikesCollection(), userId));
       logFirestoreRead('getUserLikes', 1);
 
@@ -200,6 +204,7 @@ export class FirestoreStoryService {
       return new Set();
     } catch (error) {
       console.error('Error getting user likes:', error);
+      // Return empty set instead of throwing error
       return new Set();
     }
   }
@@ -222,8 +227,16 @@ export class FirestoreStoryService {
     // Get stories (1 read)
     const { stories, hasMore, lastDoc } = await this.getStories(options);
 
-    // Get user likes (1 read)
-    const userLikedStories = await this.getUserLikes(userId);
+    // Get user likes (1 read) - only if user is provided
+    let userLikedStories = new Set<string>();
+    if (userId) {
+      try {
+        userLikedStories = await this.getUserLikes(userId);
+      } catch (error) {
+        console.warn('Could not fetch user likes, continuing without like status:', error);
+        userLikedStories = new Set();
+      }
+    }
 
     // Add isLiked property to stories
     const storiesWithLikes = stories.map((story) => ({
@@ -241,40 +254,94 @@ export class FirestoreStoryService {
   /**
    * Get single story by ID
    */
-  static async getStoryById(storyId: string): Promise<AudioStory | null> {
+
+  static async getStoryById(uuid: string): Promise<AudioStory | null> {
     try {
-      const storyDoc = await getDoc(doc(getStoriesCollection(), storyId));
+      const storyRef = doc(getStoriesCollection(), uuid);
+      const storyDoc = await getDoc(storyRef);
 
       if (storyDoc.exists()) {
         const data = storyDoc.data() as FirestoreStory;
-        return this.convertFirestoreStoryToAudioStory(data);
+        return this.convertFirestoreStoryToAudioStory(data, storyDoc.id);
       }
 
       return null;
     } catch (error) {
-      console.error('Error getting story:', error);
+      console.error('Error getting story by UUID:', error);
       return null;
+    }
+  }
+
+  /**
+   * Delete story and all related data (likes, comments) in a single transaction
+   */
+  static async deleteStory(storyId: string): Promise<void> {
+    try {
+      await runTransaction(getDb(), async (transaction) => {
+        // Access story document directly using the UUID as document ID
+        const storyRef = doc(getStoriesCollection(), storyId);
+        const storyLikesRef = doc(getStoryLikesCollection(), storyId);
+
+        // Ensure story exists before deletion
+        const storySnap = await transaction.get(storyRef);
+        if (!storySnap.exists()) {
+          throw new Error(`Story with ID ${storyId} does not exist.`);
+        }
+
+        // 1. Delete story document
+        transaction.delete(storyRef);
+
+        // 2. Delete from story-likes
+        transaction.delete(storyLikesRef);
+
+        // 3. Remove from all user-likes docs
+        const userLikesSnapshot = await getDocs(getUserLikesCollection());
+        userLikesSnapshot.forEach((userDoc) => {
+          const userData = userDoc.data() as UserLikes;
+          if (userData.likedStories && userData.likedStories[storyId]) {
+            const updatedLikes = { ...userData.likedStories };
+            delete updatedLikes[storyId];
+            transaction.update(userDoc.ref, { likedStories: updatedLikes });
+          }
+        });
+
+        // 4. Delete all related comments
+        const commentsQuery = query(getCommentsCollection(), where('storyId', '==', storyId));
+        const commentsSnapshot = await getDocs(commentsQuery);
+        commentsSnapshot.forEach((commentDoc) => {
+          transaction.delete(commentDoc.ref);
+        });
+      });
+
+      console.log(`🗑️ Successfully deleted story ${storyId} and all related data.`);
+    } catch (error) {
+      console.error(`❌ Failed to delete story ${storyId}:`, error);
+      throw new Error(`Failed to delete story: ${(error as Error).message}`);
     }
   }
 
   /**
    * Convert Firestore story to AudioStory type
    */
-  private static convertFirestoreStoryToAudioStory(data: FirestoreStory): AudioStory {
+  private static convertFirestoreStoryToAudioStory(
+    story: FirestoreStory,
+    documentId: string
+  ): AudioStory {
     return {
-      id: data.id,
-      title: data.title,
-      creator: data.creator,
-      series: data.series,
-      duration: data.duration,
-      coverUrl: data.coverUrl,
-      audioUrl: data.audioUrl,
-      genre: data.genre,
-      paid: data.paid,
-      amount: data.amount,
-      currency: data.currency,
-      likeCount: data.likeCount || 0,
-      commentCount: data.commentCount || 0,
+      id: documentId,
+      title: story.title,
+      creator: story.creator || 'Unknown',
+      series: story.series,
+      duration: story.duration || 0,
+      coverUrl: story.coverUrl || '',
+      audioUrl: story.audioUrl,
+      genre: story.genre || 'General',
+      // Handle both old and new field formats
+      paid: story.paid || false,
+      amount: story.amount,
+      currency: story.currency,
+      likeCount: story.likeCount || 0,
+      commentCount: story.commentCount || 0,
     };
   }
 }
@@ -293,7 +360,7 @@ export class FirestoreLikeService {
     storyTitle: string
   ): Promise<{ likeCount: number; isLiked: boolean }> {
     return runTransaction(getDb(), async (transaction) => {
-      // Read current state
+      // Read current state - access story document directly using UUID as document ID
       const userLikesRef = doc(getUserLikesCollection(), userId);
       const storyRef = doc(getStoriesCollection(), storyId);
       const storyLikesRef = doc(getStoryLikesCollection(), storyId);
@@ -372,6 +439,7 @@ export class FirestoreLikeService {
     userId?: string
   ): Promise<{ likeCount: number; isLiked: boolean }> {
     try {
+      // Access story document directly using UUID as document ID
       const [storyDoc, userLikesDoc] = await Promise.all([
         getDoc(doc(getStoriesCollection(), storyId)),
         userId ? getDoc(doc(getUserLikesCollection(), userId)) : Promise.resolve(null),
@@ -488,6 +556,7 @@ export class FirestoreCommentService {
     const createdAt = serverTimestamp() as Timestamp;
 
     return runTransaction(getDb(), async (transaction) => {
+      // Access story document directly using UUID as document ID
       const storyRef = doc(getStoriesCollection(), storyId);
       const commentRef = doc(commentsCollection, commentId);
 
