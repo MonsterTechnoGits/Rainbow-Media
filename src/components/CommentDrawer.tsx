@@ -24,7 +24,7 @@ import React, { useState } from 'react';
 import Iconify from '@/components/iconify';
 import { useComments } from '@/contexts/CommentContext';
 import { formatTimeAgo } from '@/data/commentData';
-import { useMobileViewport, getMobileDrawerStyles } from '@/hooks/useMobileViewport';
+import { useMobileViewport, getMobileDrawerStyles } from '@/hooks/use-mobile-view-port';
 
 const CommentDrawer: React.FC = () => {
   const { state, closeComments, addComment, likeComment } = useComments();
@@ -32,15 +32,15 @@ const CommentDrawer: React.FC = () => {
   const [commentText, setCommentText] = useState('');
   const { isMobile } = useMobileViewport();
 
-  const currentComments = state.currentTrackId ? state.comments[state.currentTrackId] || [] : [];
+  const currentComments = state.currentStoryId ? state.comments[state.currentStoryId] || [] : [];
 
   const handleClose = () => {
     closeComments();
   };
 
   const handleSubmitComment = () => {
-    if (commentText.trim() && state.currentTrackId) {
-      addComment(state.currentTrackId, commentText);
+    if (commentText.trim() && state.currentStoryId) {
+      addComment(state.currentStoryId, commentText);
       setCommentText('');
     }
   };
@@ -257,7 +257,7 @@ const CommentDrawer: React.FC = () => {
                               transform: 'scale(1.05)',
                             },
                           }}
-                          onClick={() => likeComment(comment.id, comment.trackId)}
+                          onClick={() => likeComment(comment.id, comment.storyId)}
                         >
                           <Stack direction="column" alignItems="center" spacing={0.5}>
                             {comment.isLiked ? (

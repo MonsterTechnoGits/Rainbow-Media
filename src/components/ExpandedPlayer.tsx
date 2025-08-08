@@ -30,47 +30,47 @@ import {
 import React from 'react';
 
 import Iconify from '@/components/iconify';
+import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
 import { useComments } from '@/contexts/CommentContext';
-import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
-import { useTrackLikesContext } from '@/contexts/TrackLikesContext';
-import { formatDuration } from '@/data/musicData';
+import { useStoryLikesContext } from '@/contexts/StoryLikesContext';
+import { formatDuration } from '@/data/storyData';
 
 const ExpandedPlayer: React.FC = () => {
   const {
     state,
     drawerState,
     setDrawerState,
-    pauseTrack,
-    resumeTrack,
-    nextTrack,
-    previousTrack,
+    pauseStory,
+    resumeStory,
+    // nextStory,
+    // previousStory,
     seekTo,
     toggleShuffle,
     toggleRepeat,
-  } = useMusicPlayer();
+  } = useAudioPlayer();
   const { openComments } = useComments();
-  const { toggleLike, getTrackLike } = useTrackLikesContext();
+  const { toggleLike, getStoryLike } = useStoryLikesContext();
   const theme = useTheme();
 
   const [tempCurrentTime, setTempCurrentTime] = React.useState<number | null>(null);
 
-  // Get track like status and comment count from track data or context
-  const trackLike = state.currentTrack
-    ? state.currentTrack.likeCount !== undefined
-      ? { likeCount: state.currentTrack.likeCount, isLiked: state.currentTrack.isLiked || false }
-      : getTrackLike(state.currentTrack.id)
+  // Get story like status and comment count from story data or context
+  const storyLike = state.currentStory
+    ? state.currentStory.likeCount !== undefined
+      ? { likeCount: state.currentStory.likeCount, isLiked: state.currentStory.isLiked || false }
+      : getStoryLike(state.currentStory.id)
     : null;
-  const commentCount = state.currentTrack?.commentCount || 0;
+  const commentCount = state.currentStory?.commentCount || 0;
 
-  if (!state.currentTrack) {
+  if (!state.currentStory) {
     return null;
   }
 
   const handlePlayPause = () => {
     if (state.isPlaying) {
-      pauseTrack();
+      pauseStory();
     } else {
-      resumeTrack();
+      resumeStory();
     }
   };
 
@@ -90,18 +90,18 @@ const ExpandedPlayer: React.FC = () => {
   };
 
   const handleLikeClick = () => {
-    if (state.currentTrack) {
-      toggleLike(state.currentTrack.id);
+    if (state.currentStory) {
+      toggleLike(state.currentStory.id);
     }
   };
 
   const handleCommentClick = () => {
-    if (state.currentTrack) {
+    if (state.currentStory) {
       const likeData =
-        state.currentTrack.likeCount !== undefined
-          ? { likeCount: state.currentTrack.likeCount, isLiked: state.currentTrack.isLiked }
+        state.currentStory.likeCount !== undefined
+          ? { likeCount: state.currentStory.likeCount, isLiked: state.currentStory.isLiked }
           : undefined;
-      openComments(state.currentTrack.id, likeData);
+      openComments(state.currentStory.id, likeData);
     }
   };
 
@@ -207,8 +207,8 @@ const ExpandedPlayer: React.FC = () => {
               aspectRatio: '1',
               borderRadius: { xs: 4, sm: 6 },
               overflow: 'hidden',
-              background: state.currentTrack.coverUrl
-                ? `url(${state.currentTrack.coverUrl}) center/cover`
+              background: state.currentStory.coverUrl
+                ? `url(${state.currentStory.coverUrl}) center/cover`
                 : `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
               backgroundRepeat: 'no-repeat',
               display: 'flex',
@@ -219,7 +219,7 @@ const ExpandedPlayer: React.FC = () => {
               border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
             }}
           >
-            {!state.currentTrack.coverUrl && (
+            {!state.currentStory.coverUrl && (
               <Stack alignItems="center" spacing={2}>
                 <Avatar
                   sx={{
@@ -241,7 +241,7 @@ const ExpandedPlayer: React.FC = () => {
                     textShadow: '0 2px 4px rgba(0,0,0,0.3)',
                   }}
                 >
-                  {state.currentTrack.title || 'Unknown Title'}
+                  {state.currentStory.title || 'Unknown Title'}
                 </Typography>
               </Stack>
             )}
@@ -273,7 +273,7 @@ const ExpandedPlayer: React.FC = () => {
               fontSize: { xs: '1.1rem', sm: '1.5rem' },
             }}
           >
-            {state.currentTrack.title}
+            {state.currentStory.title}
           </Typography>
           <Typography
             variant="body1"
@@ -285,7 +285,7 @@ const ExpandedPlayer: React.FC = () => {
               fontSize: { xs: '0.9rem', sm: '1rem' },
             }}
           >
-            {state.currentTrack.artist || 'Unknown Artist'}
+            {state.currentStory.creator || 'Unknown Creator'}
           </Typography>
 
           {/* Action Buttons */}
@@ -301,14 +301,14 @@ const ExpandedPlayer: React.FC = () => {
               sx={{
                 p: 1.5,
                 borderRadius: 3,
-                bgcolor: trackLike?.isLiked
+                bgcolor: storyLike?.isLiked
                   ? alpha(theme.palette.error.main, 0.1)
                   : alpha(theme.palette.text.primary, 0.05),
-                border: `1px solid ${trackLike?.isLiked ? alpha(theme.palette.error.main, 0.2) : alpha(theme.palette.divider, 0.1)}`,
+                border: `1px solid ${storyLike?.isLiked ? alpha(theme.palette.error.main, 0.2) : alpha(theme.palette.divider, 0.1)}`,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 '&:hover': {
-                  bgcolor: trackLike?.isLiked
+                  bgcolor: storyLike?.isLiked
                     ? alpha(theme.palette.error.main, 0.15)
                     : alpha(theme.palette.text.primary, 0.08),
                   transform: 'translateY(-2px)',
@@ -321,12 +321,12 @@ const ExpandedPlayer: React.FC = () => {
                   sx={{
                     p: 1,
                     borderRadius: 2,
-                    bgcolor: trackLike?.isLiked
+                    bgcolor: storyLike?.isLiked
                       ? alpha(theme.palette.error.main, 0.1)
                       : alpha(theme.palette.text.primary, 0.05),
                   }}
                 >
-                  {trackLike?.isLiked ? (
+                  {storyLike?.isLiked ? (
                     <Favorite sx={{ color: theme.palette.error.main, fontSize: '1.2rem' }} />
                   ) : (
                     <FavoriteBorder
@@ -337,14 +337,14 @@ const ExpandedPlayer: React.FC = () => {
                 <Typography
                   variant="caption"
                   sx={{
-                    color: trackLike?.isLiked
+                    color: storyLike?.isLiked
                       ? theme.palette.error.main
                       : theme.palette.text.secondary,
                     fontWeight: 600,
                     fontSize: '0.75rem',
                   }}
                 >
-                  {trackLike?.likeCount || 0}
+                  {storyLike?.likeCount || 0}
                 </Typography>
               </Stack>
             </Paper>
@@ -494,7 +494,9 @@ const ExpandedPlayer: React.FC = () => {
             </IconButton>
 
             <IconButton
-              onClick={previousTrack}
+              onClick={() => {
+                /* previousStory */
+              }}
               size="medium"
               sx={{
                 color: theme.palette.text.primary,
@@ -566,7 +568,9 @@ const ExpandedPlayer: React.FC = () => {
             )}
 
             <IconButton
-              onClick={nextTrack}
+              onClick={() => {
+                /* nextStory */
+              }}
               size="medium"
               sx={{
                 color: theme.palette.text.primary,

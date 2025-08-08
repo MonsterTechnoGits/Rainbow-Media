@@ -10,45 +10,45 @@ import React, {
   useCallback,
 } from 'react';
 
-import { trackApi } from '@/services/api';
-import { MusicTrack, PlayerState, PlayerDrawerState } from '@/types/music';
+import { storyApi } from '@/services/api';
+import { AudioStory, PlayerState, PlayerDrawerState } from '@/types/audio-story';
 
-interface MusicPlayerContextType {
+interface AudioPlayerContextType {
   state: PlayerState;
   drawerState: PlayerDrawerState;
   setDrawerState: (state: PlayerDrawerState) => void;
-  playTrack: (track: MusicTrack, trackList?: MusicTrack[]) => void;
-  pauseTrack: () => void;
-  resumeTrack: () => void;
-  nextTrack: () => void;
-  previousTrack: () => void;
+  playStory: (story: AudioStory, storyList?: AudioStory[]) => void;
+  pauseStory: () => void;
+  resumeStory: () => void;
+  nextStory: () => void;
+  previousStory: () => void;
   seekTo: (time: number) => void;
   setVolume: (volume: number) => void;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
   audioRef: React.RefObject<HTMLAudioElement | null>;
-  // URL-based track playing
-  playTrackById: (
-    trackId: string,
+  // URL-based story playing
+  playStoryById: (
+    storyId: string,
     updateUrl?: boolean,
     authContext?: { user: unknown; hasPurchased: (id: string) => boolean }
   ) => Promise<void>;
-  updateUrlWithTrack: (trackId: string) => void;
-  removeTrackFromUrl: () => void;
+  updateUrlWithStory: (storyId: string) => void;
+  removeStoryFromUrl: () => void;
   cancelAndCloseAll: () => void;
   // Payment and auth related
   showAuthDrawer: boolean;
   setShowAuthDrawer: (show: boolean) => void;
   showPaymentDrawer: boolean;
   setShowPaymentDrawer: (show: boolean) => void;
-  pendingTrack: MusicTrack | null;
-  setPendingTrack: (track: MusicTrack | null) => void;
+  pendingStory: AudioStory | null;
+  setPendingStory: (story: AudioStory | null) => void;
 }
 
 type PlayerAction =
   | {
-      type: 'SET_CURRENT_TRACK';
-      payload: { track: MusicTrack; queue: MusicTrack[]; index: number };
+      type: 'SET_CURRENT_STORY';
+      payload: { story: AudioStory; queue: AudioStory[]; index: number };
     }
   | { type: 'SET_PLAYING'; payload: boolean }
   | { type: 'SET_LOADING'; payload: boolean }
@@ -58,11 +58,11 @@ type PlayerAction =
   | { type: 'SET_VOLUME'; payload: number }
   | { type: 'TOGGLE_SHUFFLE' }
   | { type: 'TOGGLE_REPEAT' }
-  | { type: 'NEXT_TRACK' }
-  | { type: 'PREVIOUS_TRACK' };
+  | { type: 'NEXT_STORY' }
+  | { type: 'PREVIOUS_STORY' };
 
 const initialState: PlayerState = {
-  currentTrack: null,
+  currentStory: null,
   isPlaying: false,
   isLoading: false,
   isBuffering: false,
@@ -77,10 +77,10 @@ const initialState: PlayerState = {
 
 const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState => {
   switch (action.type) {
-    case 'SET_CURRENT_TRACK':
+    case 'SET_CURRENT_STORY':
       return {
         ...state,
-        currentTrack: action.payload.track,
+        currentStory: action.payload.story,
         queue: action.payload.queue,
         currentIndex: action.payload.index,
         currentTime: 0,
@@ -102,21 +102,21 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
       return { ...state, isShuffled: !state.isShuffled };
     case 'TOGGLE_REPEAT':
       return { ...state, isRepeated: !state.isRepeated };
-    case 'NEXT_TRACK': {
+    case 'NEXT_STORY': {
       const nextIndex = state.currentIndex < state.queue.length - 1 ? state.currentIndex + 1 : 0;
       return {
         ...state,
         currentIndex: nextIndex,
-        currentTrack: state.queue[nextIndex],
+        currentStory: state.queue[nextIndex],
         currentTime: 0,
       };
     }
-    case 'PREVIOUS_TRACK': {
+    case 'PREVIOUS_STORY': {
       const prevIndex = state.currentIndex > 0 ? state.currentIndex - 1 : state.queue.length - 1;
       return {
         ...state,
         currentIndex: prevIndex,
-        currentTrack: state.queue[prevIndex],
+        currentStory: state.queue[prevIndex],
         currentTime: 0,
       };
     }
@@ -125,44 +125,44 @@ const playerReducer = (state: PlayerState, action: PlayerAction): PlayerState =>
   }
 };
 
-const MusicPlayerContext = createContext<MusicPlayerContextType | undefined>(undefined);
+const AudioPlayerContext = createContext<AudioPlayerContextType | undefined>(undefined);
 
-export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(playerReducer, initialState);
   const [drawerState, setDrawerStateInternal] = React.useState<PlayerDrawerState>('closed');
   const [showAuthDrawer, setShowAuthDrawer] = React.useState(false);
   const [showPaymentDrawer, setShowPaymentDrawer] = React.useState(false);
-  const [pendingTrack, setPendingTrack] = React.useState<MusicTrack | null>(null);
+  const [pendingStory, setPendingStory] = React.useState<AudioStory | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const playTrack = (track: MusicTrack, trackList?: MusicTrack[]) => {
-    // If no trackList provided, use current queue or fetch from API
-    const queue = trackList || state.queue;
-    const index = queue.findIndex((t) => t.id === track.id);
-    dispatch({ type: 'SET_CURRENT_TRACK', payload: { track, queue, index } });
+  const playStory = (story: AudioStory, storyList?: AudioStory[]) => {
+    // If no storyList provided, use current queue or fetch from API
+    const queue = storyList || state.queue;
+    const index = queue.findIndex((s) => s.id === story.id);
+    dispatch({ type: 'SET_CURRENT_STORY', payload: { story, queue, index } });
     dispatch({ type: 'SET_LOADING', payload: true });
     // Don't set playing state yet, let the audio events handle it
     setDrawerState('mini');
     // URL will be updated only when drawer state changes to 'expanded'
   };
 
-  const updateUrlWithTrack = useCallback(
-    (trackId: string) => {
-      // Only update URL with track ID when expanded player is open
+  const updateUrlWithStory = useCallback(
+    (storyId: string) => {
+      // Only update URL with story ID when expanded player is open
       if (drawerState === 'expanded') {
         const params = new URLSearchParams(searchParams.toString());
-        params.set('track', trackId);
+        params.set('story', storyId);
         router.push(`/?${params.toString()}`, { scroll: false });
       }
     },
     [drawerState, searchParams, router]
   );
 
-  const removeTrackFromUrl = () => {
+  const removeStoryFromUrl = () => {
     const params = new URLSearchParams(searchParams.toString());
-    params.delete('track');
+    params.delete('story');
     const newUrl = params.toString() ? `/?${params.toString()}` : '/';
     router.push(newUrl, { scroll: false });
   };
@@ -171,9 +171,9 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     // Close all drawers and clear URL
     setShowAuthDrawer(false);
     setShowPaymentDrawer(false);
-    setPendingTrack(null);
+    setPendingStory(null);
     setDrawerStateInternal('mini');
-    removeTrackFromUrl();
+    removeStoryFromUrl();
   };
 
   const setDrawerState = (newState: PlayerDrawerState) => {
@@ -181,105 +181,105 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setDrawerStateInternal(newState);
 
     // Handle URL updates based on state changes
-    if (newState === 'expanded' && state.currentTrack) {
-      // Add track ID to URL when expanding to full screen
+    if (newState === 'expanded' && state.currentStory) {
+      // Add story ID to URL when expanding to full screen
       const params = new URLSearchParams(searchParams.toString());
-      params.set('track', state.currentTrack.id);
+      params.set('story', state.currentStory.id);
       router.push(`/?${params.toString()}`, { scroll: false });
     } else if (previousState === 'expanded' && newState !== 'expanded') {
-      // Remove track ID from URL when closing expanded player
-      removeTrackFromUrl();
+      // Remove story ID from URL when closing expanded player
+      removeStoryFromUrl();
     }
   };
 
-  // Helper function to load track data
-  const loadTrackData = useCallback(async (trackId: string) => {
+  // Helper function to load story data
+  const loadStoryData = useCallback(async (storyId: string) => {
     try {
-      const response = await trackApi.getTrack(trackId);
+      const response = await storyApi.getStory(storyId);
       return response.data;
     } catch (error) {
-      console.error('Error loading track:', error);
+      console.error('Error loading story:', error);
       return null;
     }
   }, []);
 
-  // Helper function to load tracks queue
-  const loadTracksQueue = useCallback(async () => {
+  // Helper function to load stories queue
+  const loadStoriesQueue = useCallback(async () => {
     try {
-      const tracksResponse = await trackApi.getTracks();
-      return tracksResponse.data.tracks;
+      const storiesResponse = await storyApi.getStories();
+      return storiesResponse.data.stories;
     } catch (error) {
-      console.error('Failed to fetch tracks for queue:', error);
+      console.error('Failed to fetch stories for queue:', error);
       return [];
     }
   }, []);
 
-  const playTrackById = async (
-    trackId: string,
+  const playStoryById = async (
+    storyId: string,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _updateUrl: boolean = true,
     authContext?: { user: unknown; hasPurchased: (id: string) => boolean }
   ) => {
     try {
       // First try to find in current queue
-      let track = state.queue.find((t) => t.id === trackId);
+      let story = state.queue.find((s) => s.id === storyId);
 
-      if (!track) {
+      if (!story) {
         // If not found in queue, fetch from API
-        const fetchedTrack = await loadTrackData(trackId);
-        track = fetchedTrack as MusicTrack | undefined;
+        const fetchedStory = await loadStoryData(storyId);
+        story = fetchedStory as AudioStory | undefined;
       }
 
-      if (track) {
-        // Add validation logic similar to handleTrackClick in MusicList
-        if (track.paid && authContext) {
+      if (story) {
+        // Add validation logic similar to handleStoryClick in StoryList
+        if (story.paid && authContext) {
           // Check if user is authenticated
           if (!authContext.user) {
-            setPendingTrack(track);
+            setPendingStory(story);
             setShowAuthDrawer(true);
             return;
           }
 
-          // Check if user has already purchased the track
-          if (!authContext.hasPurchased(track.id)) {
-            setPendingTrack(track);
+          // Check if user has already purchased the story
+          if (!authContext.hasPurchased(story.id)) {
+            setPendingStory(story);
             setShowPaymentDrawer(true);
             return;
           }
         }
 
-        // Play the track if it's free or user has purchased it
-        // If we don't have a full queue, fetch tracks from API
+        // Play the story if it's free or user has purchased it
+        // If we don't have a full queue, fetch stories from API
         let queue = state.queue;
         if (queue.length === 0) {
-          queue = await loadTracksQueue();
+          queue = await loadStoriesQueue();
           if (queue.length === 0) {
-            queue = [track]; // Use single track as queue
+            queue = [story]; // Use single story as queue
           }
         }
 
-        const index = queue.findIndex((t) => t.id === track!.id);
-        dispatch({ type: 'SET_CURRENT_TRACK', payload: { track, queue, index } });
+        const index = queue.findIndex((s) => s.id === story!.id);
+        dispatch({ type: 'SET_CURRENT_STORY', payload: { story, queue, index } });
         dispatch({ type: 'SET_LOADING', payload: true });
         setDrawerState('expanded'); // Open expanded player directly for URL-based loading
         // URL will be updated automatically by setDrawerState
       } else {
-        console.error('Track not found:', trackId);
+        console.error('Story not found:', storyId);
       }
     } catch (error) {
-      console.error('Error loading track:', error);
+      console.error('Error loading story:', error);
     }
   };
 
-  const pauseTrack = () => {
+  const pauseStory = () => {
     dispatch({ type: 'SET_PLAYING', payload: false });
   };
 
-  const resumeTrack = () => {
+  const resumeStory = () => {
     dispatch({ type: 'SET_PLAYING', payload: true });
   };
 
-  // These functions are replaced by nextTrackWithUrl and previousTrackWithUrl
+  // These functions are replaced by nextStoryWithUrl and previousStoryWithUrl
 
   const seekTo = (time: number) => {
     if (audioRef.current) {
@@ -303,28 +303,28 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     dispatch({ type: 'TOGGLE_REPEAT' });
   };
 
-  // Update next/previous track functions to update URL
-  const nextTrackWithUrl = useCallback(() => {
+  // Update next/previous story functions to update URL
+  const nextStoryWithUrl = useCallback(() => {
     if (state.queue.length > 0) {
-      dispatch({ type: 'NEXT_TRACK' });
+      dispatch({ type: 'NEXT_STORY' });
       const nextIndex = state.currentIndex < state.queue.length - 1 ? state.currentIndex + 1 : 0;
-      const nextTrack = state.queue[nextIndex];
-      if (nextTrack) {
-        updateUrlWithTrack(nextTrack.id);
+      const nextStory = state.queue[nextIndex];
+      if (nextStory) {
+        updateUrlWithStory(nextStory.id);
       }
     }
-  }, [state.currentIndex, state.queue, updateUrlWithTrack]);
+  }, [state.currentIndex, state.queue, updateUrlWithStory]);
 
-  const previousTrackWithUrl = useCallback(() => {
+  const previousStoryWithUrl = useCallback(() => {
     if (state.queue.length > 0) {
-      dispatch({ type: 'PREVIOUS_TRACK' });
+      dispatch({ type: 'PREVIOUS_STORY' });
       const prevIndex = state.currentIndex > 0 ? state.currentIndex - 1 : state.queue.length - 1;
-      const prevTrack = state.queue[prevIndex];
-      if (prevTrack) {
-        updateUrlWithTrack(prevTrack.id);
+      const prevStory = state.queue[prevIndex];
+      if (prevStory) {
+        updateUrlWithStory(prevStory.id);
       }
     }
-  }, [state.currentIndex, state.queue, updateUrlWithTrack]);
+  }, [state.currentIndex, state.queue, updateUrlWithStory]);
 
   // Audio event handlers
   useEffect(() => {
@@ -348,7 +348,7 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       dispatch({ type: 'SET_LOADING', payload: false });
       dispatch({ type: 'SET_BUFFERING', payload: false });
       // Auto-play when audio is ready
-      if (state.currentTrack) {
+      if (state.currentStory) {
         const playPromise = audio.play();
         if (playPromise !== undefined) {
           playPromise
@@ -379,7 +379,7 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         audio.currentTime = 0;
         audio.play();
       } else {
-        nextTrackWithUrl();
+        nextStoryWithUrl();
       }
     };
 
@@ -387,7 +387,7 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       dispatch({ type: 'SET_LOADING', payload: false });
       dispatch({ type: 'SET_BUFFERING', payload: false });
       dispatch({ type: 'SET_PLAYING', payload: false });
-      console.error('Audio loading failed for track:', state.currentTrack?.title, event);
+      console.error('Audio loading failed for story:', state.currentStory?.title, event);
       // You could add toast notification here for user feedback
     };
 
@@ -410,77 +410,77 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
     };
-  }, [state.isRepeated, state.currentTrack, nextTrackWithUrl]);
+  }, [state.isRepeated, state.currentStory, nextStoryWithUrl]);
 
   // Control audio playback based on state (for manual play/pause)
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !state.currentTrack || state.isLoading) return;
+    if (!audio || !state.currentStory || state.isLoading) return;
 
     if (state.isPlaying && audio.paused) {
       audio.play().catch(console.error);
     } else if (!state.isPlaying && !audio.paused) {
       audio.pause();
     }
-  }, [state.isPlaying, state.currentTrack, state.isLoading]);
+  }, [state.isPlaying, state.currentStory, state.isLoading]);
 
-  // Update audio source when track changes
+  // Update audio source when story changes
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !state.currentTrack) return;
+    if (!audio || !state.currentStory) return;
 
     // Validate audio URL before setting
-    const audioUrl = state.currentTrack.audioUrl;
+    const audioUrl = state.currentStory.audioUrl;
     if (!audioUrl || typeof audioUrl !== 'string') {
-      console.warn('Invalid audio URL for track:', state.currentTrack.title);
+      console.warn('Invalid audio URL for story:', state.currentStory.title);
       return;
     }
 
     audio.src = audioUrl;
     audio.preload = 'auto'; // Enable preloading
     audio.load(); // Start loading the audio
-  }, [state.currentTrack]);
+  }, [state.currentStory]);
 
-  // URL-based track loading is now handled by useUrlTrackLoader hook
+  // URL-based story loading is now handled by useUrlStoryLoader hook
 
-  const value: MusicPlayerContextType = {
+  const value: AudioPlayerContextType = {
     state,
     drawerState,
     setDrawerState,
-    playTrack,
-    pauseTrack,
-    resumeTrack,
-    nextTrack: nextTrackWithUrl,
-    previousTrack: previousTrackWithUrl,
+    playStory,
+    pauseStory,
+    resumeStory,
+    nextStory: nextStoryWithUrl,
+    previousStory: previousStoryWithUrl,
     seekTo,
     setVolume,
     toggleShuffle,
     toggleRepeat,
     audioRef,
-    playTrackById,
-    updateUrlWithTrack,
-    removeTrackFromUrl,
+    playStoryById,
+    updateUrlWithStory,
+    removeStoryFromUrl,
     cancelAndCloseAll,
     showAuthDrawer,
     setShowAuthDrawer,
     showPaymentDrawer,
     setShowPaymentDrawer,
-    pendingTrack,
-    setPendingTrack,
+    pendingStory,
+    setPendingStory,
   };
 
   return (
-    <MusicPlayerContext.Provider value={value}>
+    <AudioPlayerContext.Provider value={value}>
       {children}
       <audio ref={audioRef} preload="auto" crossOrigin="anonymous" />
-    </MusicPlayerContext.Provider>
+    </AudioPlayerContext.Provider>
   );
 };
 
-export const useMusicPlayer = (): MusicPlayerContextType => {
-  const context = useContext(MusicPlayerContext);
+export const useAudioPlayer = (): AudioPlayerContextType => {
+  const context = useContext(AudioPlayerContext);
   if (!context) {
-    throw new Error('useMusicPlayer must be used within a MusicPlayerProvider');
+    throw new Error('useAudioPlayer must be used within an AudioPlayerProvider');
   }
   return context;
 };

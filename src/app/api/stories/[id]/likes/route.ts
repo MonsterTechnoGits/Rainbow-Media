@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { FirestoreLikeService } from '@/services/firestore-stories';
 
-// GET /api/tracks/[id]/likes - Get likes for a story (backward compatibility)
+// GET /api/stories/[id]/likes - Get likes for a story
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const result = await FirestoreLikeService.getStoryLikes(id, userId || undefined);
 
     return NextResponse.json({
-      trackId: id, // Return as trackId for backward compatibility
+      storyId: id,
       likeCount: result.likeCount,
       isLiked: result.isLiked,
     });
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-// POST /api/tracks/[id]/likes - Toggle like for a story (backward compatibility)
+// POST /api/stories/[id]/likes - Toggle like for a story
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: storyId } = await params;
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     );
 
     return NextResponse.json({
-      trackId: storyId, // Return as trackId for backward compatibility
+      storyId,
       likeCount: result.likeCount,
       isLiked: result.isLiked,
     });

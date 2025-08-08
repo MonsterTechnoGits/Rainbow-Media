@@ -12,7 +12,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 
 import { auth } from '@/lib/firebase';
 import { userService, purchaseService } from '@/services/firestore-user';
-import { User } from '@/types/music';
+import { User } from '@/types/audio-story';
 
 interface AuthContextType {
   user: User | null;

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { FirestoreStoryService } from '@/services/firestore-stories';
 
-// GET /api/tracks - Get all stories with optional search and user likes (backward compatibility)
+// GET /api/stories - Get all stories with optional search and user likes
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     const response = {
-      tracks: result.stories, // Return as tracks for backward compatibility
+      stories: result.stories,
       total: result.stories.length, // This would need a separate count query for exact total
       filtered: result.stories.length,
       pagination: {

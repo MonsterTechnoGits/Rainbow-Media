@@ -1,6 +1,6 @@
 export interface Comment {
   id: string;
-  trackId: string;
+  storyId: string;
   userId: string;
   username: string;
   userAvatar?: string;
@@ -10,17 +10,17 @@ export interface Comment {
   isLiked: boolean; // Whether current user liked this comment
 }
 
-export interface TrackLike {
-  trackId: string;
+export interface StoryLike {
+  storyId: string;
   isLiked: boolean;
   likeCount: number;
 }
 
 export interface CommentState {
-  comments: { [trackId: string]: Comment[] };
-  trackLikes: { [trackId: string]: TrackLike };
+  comments: { [storyId: string]: Comment[] };
+  storyLikes: { [storyId: string]: StoryLike };
   isCommentsOpen: boolean;
-  currentTrackId: string | null;
+  currentStoryId: string | null;
 }
 
 export interface User {

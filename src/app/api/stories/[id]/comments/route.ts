@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { FirestoreCommentService } from '@/services/firestore-stories';
 
-// GET /api/tracks/[id]/comments - Get comments for a story (backward compatibility)
+// GET /api/stories/[id]/comments - Get comments for a story
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
 
     return NextResponse.json({
-      trackId: id, // Return as trackId for backward compatibility
+      storyId: id,
       comments: result.comments,
       total: result.comments.length, // This would need a separate count query for exact total
       pagination: {
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-// POST /api/tracks/[id]/comments - Add a comment to a story (backward compatibility)
+// POST /api/stories/[id]/comments - Add a comment to a story
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: storyId } = await params;

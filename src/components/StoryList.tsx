@@ -21,87 +21,87 @@ import React from 'react';
 import AuthDrawer from '@/components/AuthDrawer';
 import Iconify from '@/components/iconify';
 import PaymentDrawer from '@/components/PaymentDrawer';
+import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useComments } from '@/contexts/CommentContext';
-import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
-import { useTrackLikesContext } from '@/contexts/TrackLikesContext';
-import { formatDuration } from '@/data/musicData';
-import { MusicTrack } from '@/types/music';
+import { useStoryLikesContext } from '@/contexts/StoryLikesContext';
+import { formatDuration } from '@/data/storyData';
+import { AudioStory } from '@/types/audio-story';
 
-interface MusicListProps {
-  tracks: MusicTrack[];
+interface StoryListProps {
+  stories: AudioStory[];
 }
 
-const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
+const StoryList: React.FC<StoryListProps> = ({ stories }) => {
   const {
     state,
-    playTrack,
-    pauseTrack,
-    resumeTrack,
+    playStory,
+    pauseStory,
+    resumeStory,
     showAuthDrawer,
     setShowAuthDrawer,
     showPaymentDrawer,
     setShowPaymentDrawer,
-    pendingTrack,
-    setPendingTrack,
+    pendingStory,
+    setPendingStory,
     cancelAndCloseAll,
-  } = useMusicPlayer();
+  } = useAudioPlayer();
   const { user, hasPurchased } = useAuth();
   const { openComments } = useComments();
-  const { toggleLike } = useTrackLikesContext();
+  const { toggleLike } = useStoryLikesContext();
   const theme = useTheme();
 
-  const handleTrackClick = (track: MusicTrack) => {
-    // If it's the same track, just toggle play/pause
-    if (state.currentTrack?.id === track.id) {
+  const handleStoryClick = (story: AudioStory) => {
+    // If it's the same story, just toggle play/pause
+    if (state.currentStory?.id === story.id) {
       if (state.isPlaying) {
-        pauseTrack();
+        pauseStory();
       } else {
-        resumeTrack();
+        resumeStory();
       }
       return;
     }
 
-    // Check if track is paid
-    if (track.paid) {
+    // Check if story is paid
+    if (story.paid) {
       // Check if user is authenticated
       if (!user) {
-        setPendingTrack(track);
+        setPendingStory(story);
         setShowAuthDrawer(true);
         return;
       }
 
-      // Check if user has already purchased the track
-      if (!hasPurchased(track.id)) {
-        setPendingTrack(track);
+      // Check if user has already purchased the story
+      if (!hasPurchased(story.id)) {
+        setPendingStory(story);
         setShowPaymentDrawer(true);
         return;
       }
     }
 
-    // Play the track if it's free or user has purchased it
-    playTrack(track, tracks);
+    // Play the story if it's free or user has purchased it
+    playStory(story, stories);
   };
 
   const handleAuthSuccess = () => {
-    if (pendingTrack && !pendingTrack.paid) {
-      // If track is free, play it after authentication
-      playTrack(pendingTrack, tracks);
-      setPendingTrack(null);
-    } else if (pendingTrack && pendingTrack.paid && hasPurchased(pendingTrack.id)) {
+    if (pendingStory && !pendingStory.paid) {
+      // If story is free, play it after authentication
+      playStory(pendingStory, stories);
+      setPendingStory(null);
+    } else if (pendingStory && pendingStory.paid && hasPurchased(pendingStory.id)) {
       // If user already purchased it, play it
-      playTrack(pendingTrack, tracks);
-      setPendingTrack(null);
-    } else if (pendingTrack && pendingTrack.paid) {
-      // If track is paid and not purchased, show payment drawer
+      playStory(pendingStory, stories);
+      setPendingStory(null);
+    } else if (pendingStory && pendingStory.paid) {
+      // If story is paid and not purchased, show payment drawer
       setShowPaymentDrawer(true);
     }
   };
 
   const handlePaymentSuccess = () => {
-    if (pendingTrack) {
-      playTrack(pendingTrack, tracks);
-      setPendingTrack(null);
+    if (pendingStory) {
+      playStory(pendingStory, stories);
+      setPendingStory(null);
     }
   };
 
@@ -119,7 +119,7 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
       {/* Music List */}
       <Box sx={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
         <List sx={{ width: '100%', px: { xs: 0, sm: 1 } }}>
-          {tracks.length === 0 ? (
+          {stories.length === 0 ? (
             <Paper
               elevation={0}
               sx={{
@@ -147,7 +147,7 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
                     variant="subtitle1"
                     sx={{ color: theme.palette.text.primary, fontWeight: 600, mb: 0.5 }}
                   >
-                    No tracks found
+                    No stories found
                   </Typography>
                   <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
                     Try adjusting your search terms or browse all music
@@ -156,35 +156,35 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
               </Stack>
             </Paper>
           ) : (
-            tracks.map((track, index) => {
-              const isCurrentTrack = state.currentTrack?.id === track.id;
-              const isPlaying = isCurrentTrack && state.isPlaying;
-              const isLoading = isCurrentTrack && state.isLoading;
-              const isBuffering = isCurrentTrack && state.isBuffering;
+            stories.map((story, index) => {
+              const iscurrentStory = state.currentStory?.id === story.id;
+              const isPlaying = iscurrentStory && state.isPlaying;
+              const isLoading = iscurrentStory && state.isLoading;
+              const isBuffering = iscurrentStory && state.isBuffering;
               // Use track data directly for performance optimization
-              const trackLike = { likeCount: track.likeCount, isLiked: track.isLiked || false };
-              const commentCount = track.commentCount;
+              const trackLike = { likeCount: story.likeCount, isLiked: story.isLiked || false };
+              const commentCount = story.commentCount;
 
               return (
                 <Paper
-                  key={track.id}
+                  key={story.id}
                   elevation={0}
                   sx={{
                     mb: { xs: 1.5, sm: 2 },
                     mx: { xs: 1, sm: 0 },
                     borderRadius: { xs: 2, sm: 3 },
-                    bgcolor: isCurrentTrack
+                    bgcolor: iscurrentStory
                       ? alpha(theme.palette.primary.main, 0.08)
                       : alpha(theme.palette.background.paper, 0.6),
                     border: `1px solid ${
-                      isCurrentTrack
+                      iscurrentStory
                         ? alpha(theme.palette.primary.main, 0.2)
                         : alpha(theme.palette.divider, 0.1)
                     }`,
                     transition: 'all 0.2s ease-in-out',
                     cursor: 'pointer',
                     '&:hover': {
-                      bgcolor: isCurrentTrack
+                      bgcolor: iscurrentStory
                         ? alpha(theme.palette.primary.main, 0.12)
                         : alpha(theme.palette.background.paper, 0.8),
                       transform: { xs: 'none', sm: 'translateY(-2px)' },
@@ -200,7 +200,7 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
                       py: { xs: 1, sm: 1.5 },
                       px: { xs: 1.5, sm: 2 },
                     }}
-                    onClick={() => handleTrackClick(track)}
+                    onClick={() => handleStoryClick(story)}
                   >
                     <Box
                       sx={{
@@ -213,7 +213,7 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
                     >
                       <Avatar
                         variant="rounded"
-                        src={track.coverUrl}
+                        src={story.coverUrl}
                         sx={{
                           width: { xs: 40, sm: 48 },
                           height: { xs: 40, sm: 48 },
@@ -222,7 +222,7 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
                           border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
                         }}
                       >
-                        {!track.coverUrl && (
+                        {!story.coverUrl && (
                           <Iconify
                             icon="material-symbols:music-note"
                             width={20}
@@ -245,7 +245,7 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
                           justifyContent: 'center',
                           bgcolor: 'rgba(0,0,0,0.6)',
                           borderRadius: 2,
-                          opacity: isCurrentTrack ? 1 : 0,
+                          opacity: iscurrentStory ? 1 : 0,
                           transition: 'all 0.2s ease-in-out',
                           '&:hover': {
                             opacity: 1,
@@ -277,7 +277,7 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
                             }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleTrackClick(track);
+                              handleStoryClick(story);
                             }}
                           >
                             {isPlaying ? (
@@ -301,15 +301,15 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
                           <Typography
                             variant="subtitle1"
                             sx={{
-                              fontWeight: isCurrentTrack ? 700 : 600,
-                              color: isCurrentTrack
+                              fontWeight: iscurrentStory ? 700 : 600,
+                              color: iscurrentStory
                                 ? theme.palette.primary.main
                                 : theme.palette.text.primary,
                               fontSize: { xs: '0.85rem', sm: '0.95rem' },
                               lineHeight: 1.2,
                             }}
                           >
-                            {track.title || 'Unknown Title'}
+                            {story.title || 'Unknown Title'}
                           </Typography>
                           <Chip
                             label={`${index + 1}`}
@@ -328,19 +328,6 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
                       }
                       secondary={
                         <Box>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              color: theme.palette.text.secondary,
-                              fontWeight: 500,
-                              mb: 0.5,
-                              fontSize: { xs: '0.75rem', sm: '0.85rem' },
-                              lineHeight: 1.3,
-                            }}
-                          >
-                            {track.artist || 'Unknown Artist'}
-                          </Typography>
-
                           <Stack direction="row" alignItems="center" justifyContent="space-between">
                             <Stack direction="row" alignItems="center" spacing={1}>
                               <Typography
@@ -351,15 +338,14 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
                                   fontWeight: 500,
                                 }}
                               >
-                                {track.album || 'Unknown Album'} •{' '}
-                                {formatDuration(track.duration || 0)}
+                                {formatDuration(story.duration || 0)}
                               </Typography>
-                              {track.paid && (
+                              {story.paid && (
                                 <Chip
                                   label={
-                                    user && hasPurchased(track.id)
+                                    user && hasPurchased(story.id)
                                       ? 'Purchased'
-                                      : `₹${track.amount || 5}`
+                                      : `₹${story.amount || 5}`
                                   }
                                   size="small"
                                   sx={{
@@ -367,15 +353,15 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
                                     fontSize: { xs: '0.55rem', sm: '0.58rem' },
                                     fontWeight: 600,
                                     bgcolor:
-                                      user && hasPurchased(track.id)
+                                      user && hasPurchased(story.id)
                                         ? alpha(theme.palette.success.main, 0.1)
                                         : alpha(theme.palette.warning.main, 0.1),
                                     color:
-                                      user && hasPurchased(track.id)
+                                      user && hasPurchased(story.id)
                                         ? theme.palette.success.main
                                         : theme.palette.warning.main,
                                     border: `1px solid ${
-                                      user && hasPurchased(track.id)
+                                      user && hasPurchased(story.id)
                                         ? alpha(theme.palette.success.main, 0.2)
                                         : alpha(theme.palette.warning.main, 0.2)
                                     }`,
@@ -391,7 +377,7 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
                             >
                               <Paper
                                 elevation={0}
-                                onClick={() => toggleLike(track.id)}
+                                onClick={() => toggleLike(story.id)}
                                 sx={{
                                   px: { xs: 0.5, sm: 0.75 },
                                   py: 0.25,
@@ -439,9 +425,9 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
                               <Paper
                                 elevation={0}
                                 onClick={() =>
-                                  openComments(track.id, {
-                                    likeCount: track.likeCount,
-                                    isLiked: track.isLiked,
+                                  openComments(story.id, {
+                                    likeCount: story.likeCount,
+                                    isLiked: story.isLiked,
                                   })
                                 }
                                 sx={{
@@ -518,8 +504,8 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
       <AuthDrawer
         open={showAuthDrawer}
         onClose={cancelAndCloseAll}
-        trackTitle={pendingTrack?.title}
-        trackPrice={pendingTrack?.amount}
+        storyTitle={pendingStory?.title}
+        storyPrice={pendingStory?.amount}
         onAuthSuccess={handleAuthSuccess}
       />
 
@@ -527,11 +513,12 @@ const MusicList: React.FC<MusicListProps> = ({ tracks }) => {
       <PaymentDrawer
         open={showPaymentDrawer}
         onClose={cancelAndCloseAll}
-        track={pendingTrack}
+        story={pendingStory}
         onPaymentSuccess={handlePaymentSuccess}
       />
     </Box>
   );
 };
 
-export default MusicList;
+export default StoryList;
+export { StoryList as MusicList }; // Backward compatibility

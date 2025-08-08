@@ -8,25 +8,25 @@ import CommentDrawer from '@/components/CommentDrawer';
 import ExpandedPlayer from '@/components/ExpandedPlayer';
 import LoadingScreen from '@/components/loading-screen';
 import MiniPlayer from '@/components/MiniPlayer';
-import MusicList from '@/components/MusicList';
 import SettingsDrawer from '@/components/SettingsDrawer';
+import StoryList from '@/components/StoryList';
 import Toolbar from '@/components/Toolbar';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTrackLikesContext } from '@/contexts/TrackLikesContext';
+import { useStoryLikesContext } from '@/contexts/StoryLikesContext';
 import { useApi } from '@/hooks/use-api-query-hook';
-import { useUrlTrackLoader } from '@/hooks/useUrlTrackLoader';
-import { trackApi } from '@/services/api';
-import { MusicTrack } from '@/types/music';
+import { useUrlStoryLoader } from '@/hooks/use-url-story-loader';
+import { storyApi } from '@/services/api';
+import { AudioStory } from '@/types/audio-story';
 
 export default function HomePageView() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { user, loading: authLoading } = useAuth();
   const { useApiQuery } = useApi();
-  const { initializeLikes } = useTrackLikesContext();
+  const { initializeLikes } = useStoryLikesContext();
 
-  // Handle URL-based track loading with authentication
-  useUrlTrackLoader();
+  // Handle URL-based story loading with authentication
+  useUrlStoryLoader();
 
   const handleSettings = () => {
     setSettingsOpen(true);
@@ -36,16 +36,16 @@ export default function HomePageView() {
     setSettingsOpen(false);
   };
 
-  // Fetch tracks using the custom hook with user ID for optimized like data
+  // Fetch stories using the custom hook with user ID for optimized like data
   const {
-    data: tracksResponse,
+    data: storiesResponse,
     isLoading: loading,
     error,
     refetch,
   } = useApiQuery({
-    queryKey: ['tracks', searchQuery, user?.uid],
+    queryKey: ['stories', searchQuery, user?.uid],
     queryFn: () =>
-      trackApi.getTracks({
+      storyApi.getStories({
         q: searchQuery.trim() || undefined,
         userId: user?.uid, // Pass userId for optimized like state
       }),
@@ -57,14 +57,15 @@ export default function HomePageView() {
     setSearchQuery(query);
   };
 
-  const tracks = ((tracksResponse?.data as { tracks: MusicTrack[] })?.tracks || []) as MusicTrack[];
+  const stories = ((storiesResponse?.data as { stories: AudioStory[] })?.stories ||
+    []) as AudioStory[];
 
-  // Initialize like states when tracks are loaded
+  // Initialize like states when stories are loaded
   useEffect(() => {
-    if (tracks.length > 0) {
-      initializeLikes(tracks);
+    if (stories.length > 0) {
+      initializeLikes(stories);
     }
-  }, [tracks, initializeLikes]);
+  }, [stories, initializeLikes]);
 
   // Show loading screen while authentication or tracks are loading
   if (authLoading || loading) {
@@ -91,7 +92,6 @@ export default function HomePageView() {
   return (
     <>
       <Toolbar
-        title="RainbowMedia"
         onSearch={handleSearch}
         searchPlaceholder="Search songs, artists, albums..."
         singleAction={{
@@ -122,11 +122,11 @@ export default function HomePageView() {
             minHeight: 0,
           }}
         >
-          <MusicList tracks={tracks} />
+          <StoryList stories={stories} />
         </Box>
       </Container>
 
-      {/* Music Player Components */}
+      {/* Audio Story Player Components */}
       <ClientOnly>
         <MiniPlayer />
         <ExpandedPlayer />

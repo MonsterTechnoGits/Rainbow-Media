@@ -17,26 +17,24 @@ import {
 import React from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useMobileViewport, getMobileDrawerStyles } from '@/hooks/useMobileViewport';
 
 interface AuthDrawerProps {
   open: boolean;
   onClose: () => void;
-  trackTitle?: string;
-  trackPrice?: number;
+  storyTitle?: string;
+  storyPrice?: number;
   onAuthSuccess?: () => void;
 }
 
 const AuthDrawer: React.FC<AuthDrawerProps> = ({
   open,
   onClose,
-  trackTitle,
-  trackPrice = 5,
+  storyTitle,
+  storyPrice = 5,
   onAuthSuccess,
 }) => {
   const { signInWithGoogle, loading } = useAuth();
   const theme = useTheme();
-  const { isMobile } = useMobileViewport();
 
   const handleGoogleSignIn = async () => {
     try {
@@ -52,16 +50,6 @@ const AuthDrawer: React.FC<AuthDrawerProps> = ({
     }
   };
 
-  const handleGoogleSignInRedirect = async () => {
-    try {
-      await signInWithGoogle();
-      onAuthSuccess?.();
-    } catch (error: unknown) {
-      console.error('Redirect sign in failed:', error);
-      alert('Sign in failed. Please try again.');
-    }
-  };
-
   return (
     <Drawer
       anchor="bottom"
@@ -72,7 +60,8 @@ const AuthDrawer: React.FC<AuthDrawerProps> = ({
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
           bgcolor: theme.palette.background.paper,
-          ...getMobileDrawerStyles(isMobile, 80, 60),
+          height: 'auto',
+          maxHeight: '75vh',
         },
       }}
       slotProps={{}}
@@ -112,8 +101,8 @@ const AuthDrawer: React.FC<AuthDrawerProps> = ({
               Sign In Required
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 280 }}>
-              {trackTitle
-                ? `To play "${trackTitle}" (₹${trackPrice})`
+              {storyTitle
+                ? `To play "${storyTitle}" (₹${storyPrice})`
                 : 'To access premium content, please sign in with your Google account'}
             </Typography>
           </Box>
@@ -182,38 +171,8 @@ const AuthDrawer: React.FC<AuthDrawerProps> = ({
               },
             }}
           >
-            {loading
-              ? 'Signing In...'
-              : isMobile
-                ? 'Sign In with Google (Redirect)'
-                : 'Sign In with Google'}
+            {loading ? 'Signing In...' : 'Sign In with Google'}
           </Button>
-
-          {/* Only show alternative method on desktop */}
-          {!isMobile && (
-            <Button
-              fullWidth
-              variant="outlined"
-              size="large"
-              startIcon={<Google />}
-              onClick={handleGoogleSignInRedirect}
-              disabled={loading}
-              sx={{
-                py: 1.5,
-                borderRadius: 3,
-                fontWeight: 600,
-                fontSize: '1rem',
-                borderColor: theme.palette.primary.main,
-                color: theme.palette.primary.main,
-                '&:hover': {
-                  borderColor: theme.palette.primary.dark,
-                  bgcolor: alpha(theme.palette.primary.main, 0.04),
-                },
-              }}
-            >
-              Alternative Sign In Method
-            </Button>
-          )}
         </Stack>
 
         {/* Privacy Notice */}
@@ -223,9 +182,9 @@ const AuthDrawer: React.FC<AuthDrawerProps> = ({
           textAlign="center"
           sx={{ mt: 2, display: 'block', lineHeight: 1.4 }}
         >
-          {isMobile
-            ? 'You will be redirected to Google for secure sign-in, then back to the app. Your data is protected.'
-            : 'By signing in, you agree to our Terms of Service and Privacy Policy. Your data is secure and protected.'}
+          {
+            'By signing in, you agree to our Terms of Service and Privacy Policy. Your data is secure and protected.'
+          }
         </Typography>
       </Box>
     </Drawer>

@@ -22,19 +22,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useApi } from '@/hooks/use-api-query-hook';
 import { paymentApi } from '@/services/api';
-import { MusicTrack } from '@/types/music';
+import { AudioStory } from '@/types/audio-story';
 
 interface PaymentDrawerProps {
   open: boolean;
   onClose: () => void;
-  track: MusicTrack | null;
+  story: AudioStory | null;
   onPaymentSuccess: () => void;
 }
 
 const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
   open,
   onClose,
-  track,
+  story,
   onPaymentSuccess,
 }) => {
   const theme = useTheme();
@@ -54,7 +54,7 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
     }
 
     try {
-      const orderResponse = await createOrderMutation.mutateAsync(track?.amount || 5);
+      const orderResponse = await createOrderMutation.mutateAsync(story?.amount || 5);
       const order = orderResponse.data;
 
       if (!window.Razorpay) {
@@ -69,13 +69,13 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
         amount: (order as { id: string; amount: number; currency: string }).amount,
         currency: (order as { id: string; amount: number; currency: string }).currency as 'INR',
         name: 'Rainbow Media',
-        description: `Purchase: ${track?.title} by ${track?.artist}`,
+        description: `Purchase: ${story?.title} by ${story?.creator}`,
         order_id: (order as { id: string; amount: number; currency: string }).id, // Generate order_id on server
         handler: async (response) => {
           try {
             // Add purchase to user's account
-            if (track?.id) {
-              await addPurchase(track.id);
+            if (story?.id) {
+              await addPurchase(story.id);
             }
             console.log('Payment successful:', response);
             onPaymentSuccess();
@@ -102,7 +102,7 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
     }
   };
 
-  if (!track) return null;
+  if (!story) return null;
 
   return (
     <Drawer
@@ -153,7 +153,7 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
           <Stack direction="row" spacing={3} alignItems="center">
             <Avatar
               variant="rounded"
-              src={track.coverUrl}
+              src={story.coverUrl}
               sx={{
                 width: 60,
                 height: 60,
@@ -166,20 +166,12 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
 
             <Box flex={1}>
               <Typography variant="h6" fontWeight={600} gutterBottom>
-                {track.title}
+                {story.title}
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                {track.artist} • {track.album}
+                {story.creator} • {story.series}
               </Typography>
               <Stack direction="row" spacing={1} alignItems="center">
-                <Chip
-                  label={track.genre}
-                  size="small"
-                  sx={{
-                    bgcolor: alpha(theme.palette.secondary.main, 0.1),
-                    color: theme.palette.secondary.main,
-                  }}
-                />
                 <Chip
                   label="Premium"
                   size="small"
@@ -193,7 +185,7 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
 
             <Box textAlign="right">
               <Typography variant="h5" fontWeight={700} color="primary">
-                ₹{track.amount || 5}
+                ₹{story.amount || 5}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 One-time purchase
@@ -209,7 +201,7 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
 
         <Stack spacing={2} sx={{ mb: 4 }}>
           {[
-            { icon: CheckCircle, text: 'Unlimited plays of this track' },
+            { icon: CheckCircle, text: 'Unlimited plays of this story' },
             { icon: MusicNote, text: 'High-quality 320kbps audio' },
             { icon: Shield, text: 'Secure payment via Razorpay' },
           ].map((feature, index) => (
@@ -259,7 +251,7 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
               },
             }}
           >
-            {createOrderMutation.isPending ? 'Processing...' : `Pay ₹${track.amount || 5} Now`}
+            {createOrderMutation.isPending ? 'Processing...' : `Pay ₹${story.amount || 5} Now`}
           </Button>
 
           <Button

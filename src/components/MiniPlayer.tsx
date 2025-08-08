@@ -18,14 +18,14 @@ import {
 import React from 'react';
 
 import Iconify from '@/components/iconify';
-import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
+import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
 
 const MiniPlayer: React.FC = () => {
-  const { state, drawerState, setDrawerState, pauseTrack, resumeTrack, nextTrack, previousTrack } =
-    useMusicPlayer();
+  const { state, drawerState, setDrawerState, pauseStory, resumeStory, nextStory, previousStory } =
+    useAudioPlayer();
   const theme = useTheme();
 
-  if (!state.currentTrack || drawerState === 'closed') {
+  if (!state.currentStory || drawerState === 'closed') {
     return null;
   }
 
@@ -33,9 +33,9 @@ const MiniPlayer: React.FC = () => {
 
   const handlePlayPause = () => {
     if (state.isPlaying) {
-      pauseTrack();
+      pauseStory();
     } else {
-      resumeTrack();
+      resumeStory();
     }
   };
 
@@ -95,7 +95,7 @@ const MiniPlayer: React.FC = () => {
             gap: { xs: 1.5, sm: 2 },
           }}
         >
-          {/* Album Art */}
+          {/* Story Cover */}
           <Paper
             elevation={0}
             sx={{
@@ -110,16 +110,16 @@ const MiniPlayer: React.FC = () => {
           >
             <Avatar
               variant="square"
-              src={state.currentTrack.coverUrl}
+              src={state.currentStory.coverUrl}
               sx={{
                 width: '100%',
                 height: '100%',
                 borderRadius: 0,
               }}
             >
-              {!state.currentTrack.coverUrl && (
+              {!state.currentStory.coverUrl && (
                 <Iconify
-                  icon="material-symbols:music-note"
+                  icon="material-symbols:library-books"
                   width={24}
                   height={24}
                   sx={{ color: 'white' }}
@@ -128,7 +128,7 @@ const MiniPlayer: React.FC = () => {
             </Avatar>
           </Paper>
 
-          {/* Song Info */}
+          {/* Story Info */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography
               variant="body2"
@@ -142,7 +142,7 @@ const MiniPlayer: React.FC = () => {
                 fontSize: { xs: '0.85rem', sm: '0.875rem' },
               }}
             >
-              {state.currentTrack.title || 'Unknown Title'}
+              {state.currentStory.title || 'Unknown Title'}
             </Typography>
             <Stack direction="row" alignItems="center" spacing={1}>
               <Typography
@@ -156,7 +156,7 @@ const MiniPlayer: React.FC = () => {
                   fontSize: { xs: '0.7rem', sm: '0.75rem' },
                 }}
               >
-                {state.currentTrack.artist || 'Unknown Artist'}
+                {state.currentStory.creator || 'Unknown Creator'}
               </Typography>
               <Chip
                 label={state.isPlaying ? 'Playing' : 'Paused'}
@@ -183,7 +183,7 @@ const MiniPlayer: React.FC = () => {
               size="small"
               onClick={(e) => {
                 e.stopPropagation();
-                previousTrack();
+                previousStory();
               }}
               sx={{
                 color: theme.palette.text.secondary,
@@ -267,7 +267,7 @@ const MiniPlayer: React.FC = () => {
               size="small"
               onClick={(e) => {
                 e.stopPropagation();
-                nextTrack();
+                nextStory();
               }}
               sx={{
                 color: theme.palette.text.secondary,

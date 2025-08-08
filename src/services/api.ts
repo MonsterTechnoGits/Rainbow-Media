@@ -1,6 +1,6 @@
 import axios, { AxiosResponse } from 'axios';
 
-import { MusicTrack } from '@/types/music';
+import { AudioStory } from '@/types/audio-story';
 
 // Base API configuration
 const API_BASE_URL = '/api';
@@ -32,17 +32,17 @@ async function apiCall<T>(
   });
 }
 
-// Track API calls
-export const trackApi = {
-  // Get all tracks with optional search and pagination
-  async getTracks(params?: {
+// Story API calls
+export const storyApi = {
+  // Get all stories with optional search and pagination
+  async getStories(params?: {
     q?: string;
     limit?: number;
     offset?: number;
     userId?: string;
   }): Promise<
     AxiosResponse<{
-      tracks: MusicTrack[];
+      stories: AudioStory[];
       total: number;
       filtered: number;
       pagination: {
@@ -52,77 +52,77 @@ export const trackApi = {
       };
     }>
   > {
-    return apiCall('/tracks', {
+    return apiCall('/stories', {
       method: 'GET',
       params,
     });
   },
 
-  // Get single track by ID
-  async getTrack(id: string): Promise<
+  // Get single story by ID
+  async getStory(id: string): Promise<
     AxiosResponse<
-      MusicTrack & {
+      AudioStory & {
         metadata: {
-          totalTracks: number;
-          trackIndex: number;
-          nextTrack: string | null;
-          previousTrack: string | null;
-          relatedTracks: Array<{
+          totalStories: number;
+          storyIndex: number;
+          nextStory: string | null;
+          previousStory: string | null;
+          relatedStories: Array<{
             id: string;
             title: string;
-            artist: string;
+            creator: string;
           }>;
         };
       }
     >
   > {
-    return apiCall(`/tracks/${id}`);
+    return apiCall(`/stories/${id}`);
   },
 
-  // Get track likes
-  async getTrackLikes(
-    trackId: string,
+  // Get story likes
+  async getStoryLikes(
+    storyId: string,
     userId?: string
   ): Promise<
     AxiosResponse<{
-      trackId: string;
+      storyId: string;
       likeCount: number;
       isLiked: boolean;
     }>
   > {
-    return apiCall(`/tracks/${trackId}/likes`, {
+    return apiCall(`/stories/${storyId}/likes`, {
       method: 'GET',
       params: userId ? { userId } : undefined,
     });
   },
 
-  // Toggle track like
-  async toggleTrackLike(
-    trackId: string,
+  // Toggle story like
+  async toggleStoryLike(
+    storyId: string,
     userId: string
   ): Promise<
     AxiosResponse<{
-      trackId: string;
+      storyId: string;
       likeCount: number;
       isLiked: boolean;
     }>
   > {
-    return apiCall(`/tracks/${trackId}/likes`, {
+    return apiCall(`/stories/${storyId}/likes`, {
       method: 'POST',
       data: { userId },
     });
   },
 
-  // Get track comments
-  async getTrackComments(
-    trackId: string,
+  // Get story comments
+  async getStoryComments(
+    storyId: string,
     params?: {
       limit?: number;
       offset?: number;
     }
   ): Promise<
     AxiosResponse<{
-      trackId: string;
+      storyId: string;
       comments: Array<{
         id: string;
         userId: string;
@@ -148,15 +148,15 @@ export const trackApi = {
       };
     }>
   > {
-    return apiCall(`/tracks/${trackId}/comments`, {
+    return apiCall(`/stories/${storyId}/comments`, {
       method: 'GET',
       params,
     });
   },
 
-  // Add comment to track
-  async addTrackComment(
-    trackId: string,
+  // Add comment to story
+  async addStoryComment(
+    storyId: string,
     comment: {
       userId: string;
       userName: string;
@@ -179,7 +179,7 @@ export const trackApi = {
       totalComments: number;
     }>
   > {
-    return apiCall(`/tracks/${trackId}/comments`, {
+    return apiCall(`/stories/${storyId}/comments`, {
       method: 'POST',
       data: comment,
     });
@@ -222,8 +222,12 @@ export const paymentApi = {
   },
 };
 
+// Backward compatibility
+export const trackApi = storyApi;
+
 export default {
-  track: trackApi,
+  story: storyApi,
+  track: storyApi, // Backward compatibility
   user: userApi,
   payment: paymentApi,
 };

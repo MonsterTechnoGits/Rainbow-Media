@@ -15,7 +15,7 @@ import {
   Stack,
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { JSX, useState } from 'react';
 
 import Iconify from './iconify';
 
@@ -26,14 +26,18 @@ interface MenuOption {
 }
 
 interface ToolbarProps {
-  title: string;
+  title?: string;
   menuOptions?: MenuOption[];
-  singleAction?: {
-    icon: string;
-    onClick: () => void;
-    tooltip?: string;
-  };
+  singleAction?:
+    | {
+        icon: string;
+        onClick: () => void;
+        tooltip?: string;
+      }
+    | JSX.Element;
   showBackButton?: boolean;
+  showCloseButton?: boolean;
+  onClosePress?: () => void;
   onSearch?: (query: string) => void;
   searchPlaceholder?: string;
 }
@@ -43,6 +47,8 @@ export default function Toolbar({
   menuOptions,
   singleAction,
   showBackButton,
+  showCloseButton = false,
+  onClosePress = () => {},
   onSearch,
   searchPlaceholder = 'Search music...',
 }: ToolbarProps) {
@@ -96,7 +102,11 @@ export default function Toolbar({
       >
         {/* Left Section - Logo/Back Button + Title */}
         <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, flex: '0 0 auto' }}>
-          {showBackButton ? (
+          {showCloseButton ? (
+            <IconButton sx={{ borderRadius: '50%' }} onClick={onClosePress}>
+              <Iconify icon={'iconamoon:close-bold'} />
+            </IconButton>
+          ) : showBackButton ? (
             <>
               <IconButton
                 onClick={() => router.back()}
@@ -110,16 +120,6 @@ export default function Toolbar({
               >
                 <Iconify icon="material-symbols:arrow-back" />
               </IconButton>
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 500,
-                  color: theme.palette.text.primary,
-                  fontSize: '1.125rem',
-                }}
-              >
-                {title}
-              </Typography>
             </>
           ) : (
             <Box
@@ -145,6 +145,16 @@ export default function Toolbar({
               </Typography>
             </Box>
           )}
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 500,
+              color: theme.palette.text.primary,
+              fontSize: '1.125rem',
+            }}
+          >
+            {title}
+          </Typography>
         </Box>
 
         {/* Center Section - Search Bar */}
@@ -246,20 +256,25 @@ export default function Toolbar({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
           <Stack direction="row" spacing={0.5} alignItems="center">
             {/* Settings Action */}
-            {singleAction && (
-              <IconButton
-                onClick={singleAction.onClick}
-                title={singleAction.tooltip}
-                sx={{
-                  color: theme.palette.text.primary,
-                  '&:hover': {
-                    bgcolor: alpha(theme.palette.text.primary, 0.08),
-                  },
-                }}
-              >
-                <Iconify icon={singleAction.icon} width={24} height={24} />
-              </IconButton>
-            )}
+            {singleAction &&
+              (typeof singleAction === 'object' &&
+              'icon' in singleAction &&
+              'onClick' in singleAction ? (
+                <IconButton
+                  onClick={singleAction.onClick}
+                  title={singleAction.tooltip}
+                  sx={{
+                    color: theme.palette.text.primary,
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.text.primary, 0.08),
+                    },
+                  }}
+                >
+                  <Iconify icon={singleAction.icon} width={24} height={24} />
+                </IconButton>
+              ) : (
+                singleAction
+              ))}
 
             {/* Menu Options */}
             {menuOptions && menuOptions.length > 0 && (

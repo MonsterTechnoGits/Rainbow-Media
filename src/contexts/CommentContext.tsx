@@ -4,38 +4,38 @@ import React, { createContext, useContext, useReducer, useCallback } from 'react
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/use-api-query-hook';
-import { trackApi } from '@/services/api';
-import { Comment, CommentState, TrackLike } from '@/types/comment';
+import { storyApi } from '@/services/api';
+import { Comment, CommentState, StoryLike } from '@/types/comment';
 
 interface CommentContextType {
   state: CommentState;
-  openComments: (trackId: string, trackData?: { likeCount: number; isLiked?: boolean }) => void;
+  openComments: (storyId: string, storyData?: { likeCount: number; isLiked?: boolean }) => void;
   closeComments: () => void;
-  addComment: (trackId: string, text: string) => Promise<void>;
-  likeComment: (commentId: string, trackId: string) => void;
-  likeTrack: (trackId: string) => Promise<void>;
-  getTrackComments: (trackId: string) => Comment[];
-  getTrackLike: (trackId: string) => TrackLike;
-  loadTrackData: (
-    trackId: string,
-    trackData?: { likeCount: number; isLiked?: boolean }
+  addComment: (storyId: string, text: string) => Promise<void>;
+  likeComment: (commentId: string, storyId: string) => void;
+  likeStory: (storyId: string) => Promise<void>;
+  getStoryComments: (storyId: string) => Comment[];
+  getStoryLike: (storyId: string) => StoryLike;
+  loadStoryData: (
+    storyId: string,
+    storyData?: { likeCount: number; isLiked?: boolean }
   ) => Promise<void>;
 }
 
 type CommentAction =
-  | { type: 'OPEN_COMMENTS'; payload: { trackId: string } }
+  | { type: 'OPEN_COMMENTS'; payload: { storyId: string } }
   | { type: 'CLOSE_COMMENTS' }
-  | { type: 'SET_COMMENTS'; payload: { trackId: string; comments: Comment[] } }
-  | { type: 'ADD_COMMENT'; payload: { trackId: string; comment: Comment } }
-  | { type: 'LIKE_COMMENT'; payload: { commentId: string; trackId: string } }
-  | { type: 'SET_TRACK_LIKE'; payload: { trackId: string; like: TrackLike } }
-  | { type: 'LIKE_TRACK'; payload: { trackId: string } };
+  | { type: 'SET_COMMENTS'; payload: { storyId: string; comments: Comment[] } }
+  | { type: 'ADD_COMMENT'; payload: { storyId: string; comment: Comment } }
+  | { type: 'LIKE_COMMENT'; payload: { commentId: string; storyId: string } }
+  | { type: 'SET_STORY_LIKE'; payload: { storyId: string; like: StoryLike } }
+  | { type: 'LIKE_STORY'; payload: { storyId: string } };
 
 const initialState: CommentState = {
   comments: {},
-  trackLikes: {},
+  storyLikes: {},
   isCommentsOpen: false,
-  currentTrackId: null,
+  currentStoryId: null,
 };
 
 const commentReducer = (state: CommentState, action: CommentAction): CommentState => {
@@ -44,14 +44,14 @@ const commentReducer = (state: CommentState, action: CommentAction): CommentStat
       return {
         ...state,
         isCommentsOpen: true,
-        currentTrackId: action.payload.trackId,
+        currentStoryId: action.payload.storyId,
       };
 
     case 'CLOSE_COMMENTS':
       return {
         ...state,
         isCommentsOpen: false,
-        currentTrackId: null,
+        currentStoryId: null,
       };
 
     case 'SET_COMMENTS':
@@ -59,41 +59,41 @@ const commentReducer = (state: CommentState, action: CommentAction): CommentStat
         ...state,
         comments: {
           ...state.comments,
-          [action.payload.trackId]: action.payload.comments,
+          [action.payload.storyId]: action.payload.comments,
         },
       };
 
-    case 'SET_TRACK_LIKE':
+    case 'SET_STORY_LIKE':
       return {
         ...state,
-        trackLikes: {
-          ...state.trackLikes,
-          [action.payload.trackId]: action.payload.like,
+        storyLikes: {
+          ...state.storyLikes,
+          [action.payload.storyId]: action.payload.like,
         },
       };
 
     case 'ADD_COMMENT': {
-      const { trackId, comment } = action.payload;
-      const existingComments = state.comments[trackId] || [];
+      const { storyId, comment } = action.payload;
+      const existingComments = state.comments[storyId] || [];
 
       return {
         ...state,
         comments: {
           ...state.comments,
-          [trackId]: [comment, ...existingComments],
+          [storyId]: [comment, ...existingComments],
         },
       };
     }
 
     case 'LIKE_COMMENT': {
-      const { commentId, trackId } = action.payload;
-      const trackComments = state.comments[trackId] || [];
+      const { commentId, storyId } = action.payload;
+      const storyComments = state.comments[storyId] || [];
 
       return {
         ...state,
         comments: {
           ...state.comments,
-          [trackId]: trackComments.map((comment) =>
+          [storyId]: storyComments.map((comment) =>
             comment.id === commentId
               ? {
                   ...comment,
@@ -106,16 +106,16 @@ const commentReducer = (state: CommentState, action: CommentAction): CommentStat
       };
     }
 
-    case 'LIKE_TRACK': {
-      const { trackId } = action.payload;
-      const currentLike = state.trackLikes[trackId] || { trackId, likeCount: 0, isLiked: false };
+    case 'LIKE_STORY': {
+      const { storyId } = action.payload;
+      const currentLike = state.storyLikes[storyId] || { storyId, likeCount: 0, isLiked: false };
 
       return {
         ...state,
-        trackLikes: {
-          ...state.trackLikes,
-          [trackId]: {
-            trackId,
+        storyLikes: {
+          ...state.storyLikes,
+          [storyId]: {
+            storyId,
             likeCount: currentLike.isLiked
               ? Math.max(0, currentLike.likeCount - 1)
               : currentLike.likeCount + 1,
@@ -137,16 +137,16 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { user } = useAuth();
   const { useApiMutation } = useApi();
 
-  const loadTrackData = useCallback(
-    async (trackId: string, trackData?: { likeCount: number; isLiked?: boolean }) => {
+  const loadStoryData = useCallback(
+    async (storyId: string, storyData?: { likeCount: number; isLiked?: boolean }) => {
       try {
         // Load comments from Firestore API
         let comments: Comment[] = [];
         try {
-          const commentsResponse = await trackApi.getTrackComments(trackId);
+          const commentsResponse = await storyApi.getStoryComments(storyId);
           comments = commentsResponse.data.comments.map((apiComment) => ({
             id: apiComment.id,
-            trackId,
+            storyId,
             userId: apiComment.userId,
             username: apiComment.userName,
             userAvatar: apiComment.userAvatar,
@@ -160,37 +160,37 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
           comments = []; // Fallback to empty comments
         }
 
-        dispatch({ type: 'SET_COMMENTS', payload: { trackId, comments } });
+        dispatch({ type: 'SET_COMMENTS', payload: { storyId, comments } });
 
-        // Use provided track data for likes if available, otherwise fetch from API
-        if (trackData) {
-          const trackLike: TrackLike = {
-            trackId,
-            likeCount: trackData.likeCount,
-            isLiked: trackData.isLiked || false,
+        // Use provided story data for likes if available, otherwise fetch from API
+        if (storyData) {
+          const storyLike: StoryLike = {
+            storyId,
+            likeCount: storyData.likeCount,
+            isLiked: storyData.isLiked || false,
           };
-          dispatch({ type: 'SET_TRACK_LIKE', payload: { trackId, like: trackLike } });
+          dispatch({ type: 'SET_STORY_LIKE', payload: { storyId, like: storyLike } });
         } else {
           // For now, set default like data to avoid API calls
-          const trackLike: TrackLike = {
-            trackId,
+          const storyLike: StoryLike = {
+            storyId,
             likeCount: 0,
             isLiked: false,
           };
-          dispatch({ type: 'SET_TRACK_LIKE', payload: { trackId, like: trackLike } });
+          dispatch({ type: 'SET_STORY_LIKE', payload: { storyId, like: storyLike } });
         }
       } catch (error) {
-        console.error('Failed to load track data:', error);
+        console.error('Failed to load story data:', error);
         // Set empty defaults on error
-        dispatch({ type: 'SET_COMMENTS', payload: { trackId, comments: [] } });
+        dispatch({ type: 'SET_COMMENTS', payload: { storyId, comments: [] } });
         dispatch({
-          type: 'SET_TRACK_LIKE',
+          type: 'SET_STORY_LIKE',
           payload: {
-            trackId,
+            storyId,
             like: {
-              trackId,
-              likeCount: trackData?.likeCount || 0,
-              isLiked: trackData?.isLiked || false,
+              storyId,
+              likeCount: storyData?.likeCount || 0,
+              isLiked: storyData?.isLiked || false,
             },
           },
         });
@@ -200,12 +200,12 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 
   const openComments = useCallback(
-    (trackId: string, trackData?: { likeCount: number; isLiked?: boolean }) => {
-      dispatch({ type: 'OPEN_COMMENTS', payload: { trackId } });
-      // Only load comments, use provided track data for likes if available
-      loadTrackData(trackId, trackData);
+    (storyId: string, storyData?: { likeCount: number; isLiked?: boolean }) => {
+      dispatch({ type: 'OPEN_COMMENTS', payload: { storyId } });
+      // Only load comments, use provided story data for likes if available
+      loadStoryData(storyId, storyData);
     },
-    [loadTrackData]
+    [loadStoryData]
   );
 
   const closeComments = useCallback(() => {
@@ -214,8 +214,8 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const addCommentMutation = useApiMutation({
     mutationFn: (variables: unknown) => {
-      const { trackId, comment } = variables as {
-        trackId: string;
+      const { storyId, comment } = variables as {
+        storyId: string;
         comment: {
           userId: string;
           userName: string;
@@ -223,12 +223,12 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
           content: string;
         };
       };
-      return trackApi.addTrackComment(trackId, comment);
+      return storyApi.addStoryComment(storyId, comment);
     },
   });
 
   const addComment = useCallback(
-    async (trackId: string, text: string) => {
+    async (storyId: string, text: string) => {
       if (!user) return;
 
       try {
@@ -239,7 +239,7 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
           content: text,
         };
 
-        const response = await addCommentMutation.mutateAsync({ trackId, comment: commentData });
+        const response = await addCommentMutation.mutateAsync({ storyId, comment: commentData });
 
         // Transform API comment to our format
         const responseData = response.data as {
@@ -259,7 +259,7 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         const newComment: Comment = {
           id: responseData.comment.id,
-          trackId,
+          storyId,
           userId: responseData.comment.userId,
           username: responseData.comment.userName,
           userAvatar: responseData.comment.userAvatar,
@@ -269,7 +269,7 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
           isLiked: false,
         };
 
-        dispatch({ type: 'ADD_COMMENT', payload: { trackId, comment: newComment } });
+        dispatch({ type: 'ADD_COMMENT', payload: { storyId, comment: newComment } });
       } catch (error) {
         console.error('Failed to add comment:', error);
       }
@@ -277,64 +277,64 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [user, addCommentMutation]
   );
 
-  const likeComment = useCallback((commentId: string, trackId: string) => {
-    dispatch({ type: 'LIKE_COMMENT', payload: { commentId, trackId } });
+  const likeComment = useCallback((commentId: string, storyId: string) => {
+    dispatch({ type: 'LIKE_COMMENT', payload: { commentId, storyId } });
   }, []);
 
-  const likeTrackMutation = useApiMutation({
+  const likeStoryMutation = useApiMutation({
     mutationFn: (variables: unknown) => {
-      const { trackId, userId } = variables as { trackId: string; userId: string };
-      return trackApi.toggleTrackLike(trackId, userId);
+      const { storyId, userId } = variables as { storyId: string; userId: string };
+      return storyApi.toggleStoryLike(storyId, userId);
     },
   });
 
-  const likeTrack = useCallback(
-    async (trackId: string) => {
+  const likeStory = useCallback(
+    async (storyId: string) => {
       if (!user) return;
 
       try {
-        const response = await likeTrackMutation.mutateAsync({ trackId, userId: user.uid });
+        const response = await likeStoryMutation.mutateAsync({ storyId, userId: user.uid });
 
         const responseData = response.data as {
-          trackId: string;
+          storyId: string;
           likeCount: number;
           isLiked: boolean;
         };
 
-        const trackLike: TrackLike = {
-          trackId,
+        const storyLike: StoryLike = {
+          storyId,
           likeCount: responseData.likeCount,
           isLiked: responseData.isLiked,
         };
 
-        dispatch({ type: 'SET_TRACK_LIKE', payload: { trackId, like: trackLike } });
+        dispatch({ type: 'SET_STORY_LIKE', payload: { storyId, like: storyLike } });
       } catch (error) {
-        console.error('Failed to toggle track like:', error);
+        console.error('Failed to toggle story like:', error);
         // Fallback to optimistic update
-        dispatch({ type: 'LIKE_TRACK', payload: { trackId } });
+        dispatch({ type: 'LIKE_STORY', payload: { storyId } });
       }
     },
-    [user, likeTrackMutation]
+    [user, likeStoryMutation]
   );
 
-  const getTrackComments = useCallback(
-    (trackId: string): Comment[] => {
-      return state.comments[trackId] || [];
+  const getStoryComments = useCallback(
+    (storyId: string): Comment[] => {
+      return state.comments[storyId] || [];
     },
     [state.comments]
   );
 
-  const getTrackLike = useCallback(
-    (trackId: string): TrackLike => {
+  const getStoryLike = useCallback(
+    (storyId: string): StoryLike => {
       return (
-        state.trackLikes[trackId] || {
-          trackId,
+        state.storyLikes[storyId] || {
+          storyId,
           likeCount: 0,
           isLiked: false,
         }
       );
     },
-    [state.trackLikes]
+    [state.storyLikes]
   );
 
   const value: CommentContextType = {
@@ -343,10 +343,10 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     closeComments,
     addComment,
     likeComment,
-    likeTrack,
-    getTrackComments,
-    getTrackLike,
-    loadTrackData,
+    likeStory,
+    getStoryComments,
+    getStoryLike,
+    loadStoryData,
   };
 
   return <CommentContext.Provider value={value}>{children}</CommentContext.Provider>;

@@ -1,7 +1,7 @@
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase';
-import { User, PurchaseDetails } from '@/types/music';
+import { User, PurchaseDetails } from '@/types/audio-story';
 
 // User service functions
 export const userService = {

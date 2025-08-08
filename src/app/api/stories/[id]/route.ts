@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { FirestoreStoryService } from '@/services/firestore-stories';
 
-// GET /api/tracks/[id] - Get story by ID (backward compatibility)
+// GET /api/stories/[id] - Get story by ID
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -18,11 +18,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const storyWithMetadata = {
       ...story,
       metadata: {
-        totalTracks: 0, // Would need a count query (using tracks for backward compatibility)
-        trackIndex: 0,
-        nextTrack: null,
-        previousTrack: null,
-        relatedTracks: [], // Would need a related stories query (using tracks for backward compatibility)
+        totalStories: 0, // Would need a count query
+        storyIndex: 0,
+        nextStory: null,
+        previousStory: null,
+        relatedStories: [], // Would need a related stories query
       },
     };
 

@@ -4,11 +4,11 @@ import { useState, useCallback } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useApi } from '@/hooks/use-api-query-hook';
-import { trackApi } from '@/services/api';
-import { MusicTrack } from '@/types/music';
+import { storyApi } from '@/services/api';
+import { AudioStory } from '@/types/audio-story';
 
-interface TrackLikeState {
-  [trackId: string]: {
+interface StoryLikeState {
+  [storyId: string]: {
     likeCount: number;
     isLiked: boolean;
     isUpdating: boolean;
@@ -16,32 +16,32 @@ interface TrackLikeState {
 }
 
 /**
- * Efficient track likes hook that minimizes API calls
+ * Efficient story likes hook that minimizes API calls
  * Uses optimistic updates and caches state locally
  */
-export const useTrackLikes = () => {
-  const [likeStates, setLikeStates] = useState<TrackLikeState>({});
+export const useStoryLikes = () => {
+  const [likeStates, setLikeStates] = useState<StoryLikeState>({});
   const { user } = useAuth();
   const { useApiMutation } = useApi();
 
-  // Initialize like states from track data (called when tracks are loaded)
-  const initializeLikes = useCallback((tracks: MusicTrack[]) => {
-    const newStates: TrackLikeState = {};
-    tracks.forEach((track) => {
-      newStates[track.id] = {
-        likeCount: track.likeCount,
-        isLiked: track.isLiked || false,
+  // Initialize like states from story data (called when stories are loaded)
+  const initializeLikes = useCallback((stories: AudioStory[]) => {
+    const newStates: StoryLikeState = {};
+    stories.forEach((story) => {
+      newStates[story.id] = {
+        likeCount: story.likeCount,
+        isLiked: story.isLiked || false,
         isUpdating: false,
       };
     });
     setLikeStates(newStates);
   }, []);
 
-  // Get like state for a specific track
-  const getTrackLike = useCallback(
-    (trackId: string) => {
+  // Get like state for a specific story
+  const getStoryLike = useCallback(
+    (storyId: string) => {
       return (
-        likeStates[trackId] || {
+        likeStates[storyId] || {
           likeCount: 0,
           isLiked: false,
           isUpdating: false,
@@ -51,25 +51,25 @@ export const useTrackLikes = () => {
     [likeStates]
   );
 
-  const likeTrackMutation = useApiMutation({
+  const likeStoryMutation = useApiMutation({
     mutationFn: (variables: unknown) => {
-      const { trackId, userId } = variables as { trackId: string; userId: string };
-      return trackApi.toggleTrackLike(trackId, userId);
+      const { storyId, userId } = variables as { storyId: string; userId: string };
+      return storyApi.toggleStoryLike(storyId, userId);
     },
   });
 
   // Toggle like with optimistic update
   const toggleLike = useCallback(
-    async (trackId: string) => {
+    async (storyId: string) => {
       if (!user) return;
 
-      const currentState = likeStates[trackId];
+      const currentState = likeStates[storyId];
       if (!currentState || currentState.isUpdating) return;
 
       // Optimistic update
       setLikeStates((prev) => ({
         ...prev,
-        [trackId]: {
+        [storyId]: {
           likeCount: currentState.isLiked
             ? Math.max(0, currentState.likeCount - 1)
             : currentState.likeCount + 1,
@@ -79,10 +79,10 @@ export const useTrackLikes = () => {
       }));
 
       try {
-        const response = await likeTrackMutation.mutateAsync({ trackId, userId: user.uid });
+        const response = await likeStoryMutation.mutateAsync({ storyId, userId: user.uid });
 
         const responseData = response.data as {
-          trackId: string;
+          storyId: string;
           likeCount: number;
           isLiked: boolean;
         };
@@ -90,30 +90,30 @@ export const useTrackLikes = () => {
         // Update with server response
         setLikeStates((prev) => ({
           ...prev,
-          [trackId]: {
+          [storyId]: {
             likeCount: responseData.likeCount,
             isLiked: responseData.isLiked,
             isUpdating: false,
           },
         }));
       } catch (error) {
-        console.error('Failed to toggle track like:', error);
+        console.error('Failed to toggle story like:', error);
         // Revert optimistic update on error
         setLikeStates((prev) => ({
           ...prev,
-          [trackId]: {
+          [storyId]: {
             ...currentState,
             isUpdating: false,
           },
         }));
       }
     },
-    [user, likeStates, likeTrackMutation]
+    [user, likeStates, likeStoryMutation]
   );
 
   return {
     initializeLikes,
-    getTrackLike,
+    getStoryLike,
     toggleLike,
   };
 };

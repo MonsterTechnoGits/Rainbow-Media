@@ -26,7 +26,7 @@ import AuthDrawer from '@/components/AuthDrawer';
 import Iconify from '@/components/iconify';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
-import { useMobileViewport, getMobileDrawerStyles } from '@/hooks/useMobileViewport';
+import { useMobileViewport, getMobileDrawerStyles } from '@/hooks/use-mobile-view-port';
 import { useThemeMode } from '@/theme/ThemeProvider';
 
 interface SettingsDrawerProps {
