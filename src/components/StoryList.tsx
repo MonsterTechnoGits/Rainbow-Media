@@ -14,6 +14,7 @@ import {
   Paper,
   alpha,
   Chip,
+  ButtonBase,
 } from '@mui/material';
 import React from 'react';
 
@@ -100,6 +101,14 @@ const StoryList: React.FC<StoryListProps> = ({ stories }) => {
     }
   };
 
+  const handleSkipPayment = () => {
+    // Play story for free without affecting purchase history
+    if (pendingStory) {
+      playStory(pendingStory, stories);
+      setPendingStory(null);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -176,8 +185,8 @@ const StoryList: React.FC<StoryListProps> = ({ stories }) => {
                         ? alpha(theme.palette.primary.main, 0.2)
                         : alpha(theme.palette.divider, 0.1)
                     }`,
-                    transition: 'all 0.2s ease-in-out',
-                    cursor: 'pointer',
+                    overflow: 'hidden',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                     '&:hover': {
                       bgcolor: iscurrentStory
                         ? alpha(theme.palette.primary.main, 0.12)
@@ -190,123 +199,171 @@ const StoryList: React.FC<StoryListProps> = ({ stories }) => {
                     },
                   }}
                 >
-                  <ListItem
-                    sx={{
-                      py: { xs: 1, sm: 1.5 },
-                      px: { xs: 1.5, sm: 2 },
-                    }}
+                  <ButtonBase
                     onClick={() => handleStoryClick(story)}
+                    disableRipple={false}
+                    sx={{
+                      width: '100%',
+                      height: '100%',
+                      p: 0,
+                      borderRadius: { xs: 2, sm: 3 },
+                      display: 'flex',
+                      alignItems: 'stretch',
+                      justifyContent: 'flex-start',
+                      textAlign: 'left',
+                      transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '& .MuiTouchRipple-root': {
+                        color: iscurrentStory
+                          ? alpha(theme.palette.primary.main, 0.3)
+                          : alpha(theme.palette.primary.main, 0.2),
+                        '& .MuiTouchRipple-child': {
+                          backgroundColor: iscurrentStory
+                            ? alpha(theme.palette.primary.main, 0.4)
+                            : alpha(theme.palette.primary.main, 0.3),
+                        },
+                        '& .MuiTouchRipple-ripple': {
+                          '& .MuiTouchRipple-child': {
+                            animationDuration: '600ms',
+                          },
+                        },
+                      },
+                      '&:active': {
+                        transform: { xs: 'scale(0.98)', sm: 'scale(0.99)' },
+                      },
+                    }}
                   >
-                    <Box
+                    <ListItem
                       sx={{
-                        position: 'relative',
-                        mr: 2.5,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        py: { xs: 1, sm: 1.5 },
+                        px: { xs: 1.5, sm: 2 },
+                        width: '100%',
+                        cursor: 'inherit',
+                        '&:hover': {
+                          bgcolor: 'transparent',
+                        },
                       }}
                     >
-                      <Avatar
-                        variant="rounded"
-                        src={story.coverUrl}
+                      <Box
                         sx={{
-                          width: { xs: 40, sm: 48 },
-                          height: { xs: 40, sm: 48 },
-                          borderRadius: 2,
-                          bgcolor: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                          border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-                        }}
-                      >
-                        {!story.coverUrl && (
-                          <Iconify
-                            icon="material-symbols:music-note"
-                            width={20}
-                            height={20}
-                            sx={{ color: 'white' }}
-                          />
-                        )}
-                      </Avatar>
-
-                      <Paper
-                        elevation={0}
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
+                          position: 'relative',
+                          mr: 2.5,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          bgcolor: 'rgba(0,0,0,0.6)',
-                          borderRadius: 2,
-                          opacity: iscurrentStory ? 1 : 0,
-                          transition: 'all 0.2s ease-in-out',
-                          '&:hover': {
-                            opacity: 1,
-                          },
                         }}
                       >
-                        {isLoading || isBuffering ? (
-                          <CircularProgress
-                            size={20}
-                            sx={{
-                              color: 'white',
-                            }}
-                          />
-                        ) : (
-                          <Paper
-                            elevation={0}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: 28,
-                              height: 28,
-                              borderRadius: '50%',
-                              bgcolor: theme.palette.primary.main,
-                              '&:hover': {
-                                bgcolor: theme.palette.primary.dark,
-                                transform: 'scale(1.1)',
-                              },
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStoryClick(story);
-                            }}
-                          >
-                            {isPlaying ? (
-                              <Pause sx={{ fontSize: '0.9rem', color: 'white' }} />
-                            ) : (
-                              <PlayArrow sx={{ fontSize: '0.9rem', color: 'white' }} />
-                            )}
-                          </Paper>
-                        )}
-                      </Paper>
-                    </Box>
-
-                    <ListItemText
-                      primary={
-                        <Stack
-                          direction="row"
-                          alignItems="center"
-                          justifyContent="space-between"
-                          sx={{ mb: 0.5 }}
+                        <Avatar
+                          variant="rounded"
+                          src={story.coverUrl}
+                          sx={{
+                            width: { xs: 40, sm: 48 },
+                            height: { xs: 40, sm: 48 },
+                            borderRadius: 2,
+                            bgcolor: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                          }}
                         >
-                          <Typography
-                            variant="subtitle1"
-                            sx={{
-                              fontWeight: iscurrentStory ? 700 : 600,
-                              color: iscurrentStory
-                                ? theme.palette.primary.main
-                                : theme.palette.text.primary,
-                              fontSize: { xs: '0.85rem', sm: '0.95rem' },
-                              lineHeight: 1.2,
-                            }}
+                          {!story.coverUrl && (
+                            <Iconify
+                              icon="material-symbols:music-note"
+                              width={20}
+                              height={20}
+                              sx={{ color: 'white' }}
+                            />
+                          )}
+                        </Avatar>
+
+                        <Paper
+                          elevation={0}
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            bgcolor: 'rgba(0,0,0,0.6)',
+                            borderRadius: 2,
+                            opacity: iscurrentStory ? 1 : 0,
+                            transition: 'all 0.2s ease-in-out',
+                            '&:hover': {
+                              opacity: 1,
+                            },
+                          }}
+                        >
+                          {isLoading || isBuffering ? (
+                            <CircularProgress
+                              size={20}
+                              sx={{
+                                color: 'white',
+                              }}
+                            />
+                          ) : (
+                            <ButtonBase
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStoryClick(story);
+                              }}
+                              disableRipple={false}
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: '50%',
+                                bgcolor: theme.palette.primary.main,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+                                '& .MuiTouchRipple-root': {
+                                  color: alpha(theme.palette.primary.contrastText, 0.4),
+                                  '& .MuiTouchRipple-child': {
+                                    backgroundColor: alpha(theme.palette.primary.contrastText, 0.6),
+                                  },
+                                },
+                                '&:hover': {
+                                  bgcolor: theme.palette.primary.dark,
+                                  transform: 'scale(1.1)',
+                                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.4)}`,
+                                },
+                                '&:active': {
+                                  transform: 'scale(0.9)',
+                                },
+                              }}
+                            >
+                              {isPlaying ? (
+                                <Pause sx={{ fontSize: '0.9rem', color: 'white', zIndex: 1 }} />
+                              ) : (
+                                <PlayArrow sx={{ fontSize: '0.9rem', color: 'white', zIndex: 1 }} />
+                              )}
+                            </ButtonBase>
+                          )}
+                        </Paper>
+                      </Box>
+
+                      <ListItemText
+                        primary={
+                          <Stack
+                            direction="row"
+                            alignItems="center"
+                            justifyContent="space-between"
+                            sx={{ mb: 0.5 }}
                           >
-                            {story.title || 'Unknown Title'}
-                          </Typography>
-                          {/* <Chip
+                            <Typography
+                              variant="subtitle1"
+                              sx={{
+                                fontWeight: iscurrentStory ? 700 : 600,
+                                color: iscurrentStory
+                                  ? theme.palette.primary.main
+                                  : theme.palette.text.primary,
+                                fontSize: { xs: '0.85rem', sm: '0.95rem' },
+                                lineHeight: 1.2,
+                              }}
+                            >
+                              {story.title || 'Unknown Title'}
+                            </Typography>
+                            {/* <Chip
                             label={`${index + 1}`}
                             size="small"
                             sx={{
@@ -319,143 +376,185 @@ const StoryList: React.FC<StoryListProps> = ({ stories }) => {
                               display: { xs: 'none', sm: 'inline-flex' },
                             }}
                           /> */}
-                        </Stack>
-                      }
-                      secondary={
-                        <Box>
-                          <Stack direction="row" alignItems="center" justifyContent="space-between">
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  color: alpha(theme.palette.text.secondary, 0.8),
-                                  fontSize: { xs: '0.65rem', sm: '0.72rem' },
-                                  fontWeight: 500,
-                                }}
-                              >
-                                {formatDuration(story.duration || 0)}
-                              </Typography>
-                              {story.paid && (
-                                <Chip
-                                  label={
-                                    user && hasPurchased(story.id)
-                                      ? 'Purchased'
-                                      : `₹${story.amount || 5}`
-                                  }
-                                  size="small"
-                                  sx={{
-                                    height: { xs: 12, sm: 14 },
-                                    fontSize: { xs: '0.55rem', sm: '0.58rem' },
-                                    fontWeight: 600,
-                                    bgcolor:
-                                      user && hasPurchased(story.id)
-                                        ? alpha(theme.palette.success.main, 0.1)
-                                        : alpha(theme.palette.warning.main, 0.1),
-                                    color:
-                                      user && hasPurchased(story.id)
-                                        ? theme.palette.success.main
-                                        : theme.palette.warning.main,
-                                    border: `1px solid ${
-                                      user && hasPurchased(story.id)
-                                        ? alpha(theme.palette.success.main, 0.2)
-                                        : alpha(theme.palette.warning.main, 0.2)
-                                    }`,
-                                  }}
-                                />
-                              )}
-                            </Stack>
-
+                          </Stack>
+                        }
+                        secondary={
+                          <Box>
                             <Stack
                               direction="row"
-                              spacing={{ xs: 0.5, sm: 1 }}
-                              sx={{ display: { xs: 'none', sm: 'flex' } }}
+                              alignItems="center"
+                              justifyContent="space-between"
                             >
-                              <Paper
-                                elevation={0}
-                                sx={{
-                                  px: { xs: 0.5, sm: 0.75 },
-                                  py: 0.25,
-                                  borderRadius: 1.5,
-                                  cursor: 'pointer',
-                                  bgcolor: trackLike.isLiked
-                                    ? alpha(theme.palette.error.main, 0.1)
-                                    : alpha(theme.palette.text.primary, 0.05),
-                                  border: `1px solid ${
-                                    trackLike.isLiked
-                                      ? alpha(theme.palette.error.main, 0.2)
-                                      : alpha(theme.palette.divider, 0.1)
-                                  }`,
-                                  '&:hover': {
-                                    bgcolor: trackLike.isLiked
-                                      ? alpha(theme.palette.error.main, 0.15)
-                                      : alpha(theme.palette.text.primary, 0.08),
-                                  },
-                                }}
-                              >
-                                <Stack direction="row" alignItems="center" spacing={0.5}>
-                                  <Favorite
+                              <Stack direction="row" alignItems="center" spacing={1}>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    color: alpha(theme.palette.text.secondary, 0.8),
+                                    fontSize: { xs: '0.65rem', sm: '0.72rem' },
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  {formatDuration(story.duration || 0)}
+                                </Typography>
+                                {story.paid && (
+                                  <Chip
+                                    label={
+                                      user && hasPurchased(story.id)
+                                        ? 'Purchased'
+                                        : `₹${story.amount || 5}`
+                                    }
+                                    size="small"
                                     sx={{
-                                      fontSize: { xs: '0.65rem', sm: '0.75rem' },
-                                      color: trackLike.isLiked
-                                        ? theme.palette.error.main
-                                        : theme.palette.text.secondary,
+                                      height: { xs: 12, sm: 14 },
+                                      fontSize: { xs: '0.55rem', sm: '0.58rem' },
+                                      fontWeight: 600,
+                                      bgcolor:
+                                        user && hasPurchased(story.id)
+                                          ? alpha(theme.palette.success.main, 0.1)
+                                          : alpha(theme.palette.warning.main, 0.1),
+                                      color:
+                                        user && hasPurchased(story.id)
+                                          ? theme.palette.success.main
+                                          : theme.palette.warning.main,
+                                      border: `1px solid ${
+                                        user && hasPurchased(story.id)
+                                          ? alpha(theme.palette.success.main, 0.2)
+                                          : alpha(theme.palette.warning.main, 0.2)
+                                      }`,
                                     }}
                                   />
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      color: trackLike.isLiked
-                                        ? theme.palette.error.main
-                                        : theme.palette.text.secondary,
-                                      fontSize: { xs: '0.6rem', sm: '0.65rem' },
-                                      fontWeight: 600,
-                                    }}
-                                  >
-                                    {trackLike.likeCount}
-                                  </Typography>
-                                </Stack>
-                              </Paper>
+                                )}
+                              </Stack>
 
-                              <Paper
-                                elevation={0}
-                                sx={{
-                                  px: { xs: 0.5, sm: 0.75 },
-                                  py: 0.25,
-                                  borderRadius: 1.5,
-                                  cursor: 'pointer',
-                                  bgcolor: alpha(theme.palette.text.primary, 0.05),
-                                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                                  '&:hover': {
-                                    bgcolor: alpha(theme.palette.text.primary, 0.08),
-                                  },
-                                }}
+                              <Stack
+                                direction="row"
+                                spacing={{ xs: 0.5, sm: 1 }}
+                                sx={{ display: { xs: 'none', sm: 'flex' } }}
                               >
-                                <Stack direction="row" alignItems="center" spacing={0.5}>
-                                  <CommentIcon
+                                <ButtonBase
+                                  onClick={(e) => e.stopPropagation()}
+                                  disableRipple={false}
+                                  sx={{
+                                    borderRadius: 1.5,
+                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    '& .MuiTouchRipple-root': {
+                                      color: alpha(theme.palette.error.main, 0.3),
+                                      '& .MuiTouchRipple-child': {
+                                        backgroundColor: alpha(theme.palette.error.main, 0.4),
+                                      },
+                                    },
+                                    '&:active': {
+                                      transform: 'scale(0.95)',
+                                    },
+                                  }}
+                                >
+                                  <Paper
+                                    elevation={0}
                                     sx={{
-                                      fontSize: { xs: '0.65rem', sm: '0.75rem' },
-                                      color: theme.palette.text.secondary,
-                                    }}
-                                  />
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      color: theme.palette.text.secondary,
-                                      fontSize: { xs: '0.6rem', sm: '0.65rem' },
-                                      fontWeight: 600,
+                                      px: { xs: 0.5, sm: 0.75 },
+                                      py: 0.25,
+                                      borderRadius: 1.5,
+                                      cursor: 'pointer',
+                                      bgcolor: trackLike.isLiked
+                                        ? alpha(theme.palette.error.main, 0.1)
+                                        : alpha(theme.palette.text.primary, 0.05),
+                                      border: `1px solid ${
+                                        trackLike.isLiked
+                                          ? alpha(theme.palette.error.main, 0.2)
+                                          : alpha(theme.palette.divider, 0.1)
+                                      }`,
+                                      pointerEvents: 'none',
+                                      '&:hover': {
+                                        bgcolor: trackLike.isLiked
+                                          ? alpha(theme.palette.error.main, 0.15)
+                                          : alpha(theme.palette.text.primary, 0.08),
+                                      },
                                     }}
                                   >
-                                    {commentCount}
-                                  </Typography>
-                                </Stack>
-                              </Paper>
+                                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                                      <Favorite
+                                        sx={{
+                                          fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                                          color: trackLike.isLiked
+                                            ? theme.palette.error.main
+                                            : theme.palette.text.secondary,
+                                        }}
+                                      />
+                                      <Typography
+                                        variant="caption"
+                                        sx={{
+                                          color: trackLike.isLiked
+                                            ? theme.palette.error.main
+                                            : theme.palette.text.secondary,
+                                          fontSize: { xs: '0.6rem', sm: '0.65rem' },
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        {trackLike.likeCount}
+                                      </Typography>
+                                    </Stack>
+                                  </Paper>
+                                </ButtonBase>
+
+                                <ButtonBase
+                                  onClick={(e) => e.stopPropagation()}
+                                  disableRipple={false}
+                                  sx={{
+                                    borderRadius: 1.5,
+                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    '& .MuiTouchRipple-root': {
+                                      color: alpha(theme.palette.primary.main, 0.3),
+                                      '& .MuiTouchRipple-child': {
+                                        backgroundColor: alpha(theme.palette.primary.main, 0.4),
+                                      },
+                                    },
+                                    '&:active': {
+                                      transform: 'scale(0.95)',
+                                    },
+                                  }}
+                                >
+                                  <Paper
+                                    elevation={0}
+                                    sx={{
+                                      px: { xs: 0.5, sm: 0.75 },
+                                      py: 0.25,
+                                      borderRadius: 1.5,
+                                      cursor: 'pointer',
+                                      bgcolor: alpha(theme.palette.text.primary, 0.05),
+                                      border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                                      pointerEvents: 'none',
+                                      '&:hover': {
+                                        bgcolor: alpha(theme.palette.text.primary, 0.08),
+                                      },
+                                    }}
+                                  >
+                                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                                      <CommentIcon
+                                        sx={{
+                                          fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                                          color: theme.palette.text.secondary,
+                                        }}
+                                      />
+                                      <Typography
+                                        variant="caption"
+                                        sx={{
+                                          color: theme.palette.text.secondary,
+                                          fontSize: { xs: '0.6rem', sm: '0.65rem' },
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        {commentCount}
+                                      </Typography>
+                                    </Stack>
+                                  </Paper>
+                                </ButtonBase>
+                              </Stack>
                             </Stack>
-                          </Stack>
-                        </Box>
-                      }
-                    />
+                          </Box>
+                        }
+                      />
 
-                    {/* <Box
+                      {/* <Box
                       sx={{
                         display: { xs: 'none', sm: 'flex' },
                         alignItems: 'center',
@@ -480,7 +579,8 @@ const StoryList: React.FC<StoryListProps> = ({ stories }) => {
                         <MoreVert sx={{ fontSize: '0.9rem' }} />
                       </IconButton>
                     </Box> */}
-                  </ListItem>
+                    </ListItem>
+                  </ButtonBase>
                 </Paper>
               );
             })
@@ -503,6 +603,7 @@ const StoryList: React.FC<StoryListProps> = ({ stories }) => {
         onClose={cancelAndCloseAll}
         story={pendingStory}
         onPaymentSuccess={handlePaymentSuccess}
+        onSkipPayment={handleSkipPayment}
       />
     </Box>
   );

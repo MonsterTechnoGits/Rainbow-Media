@@ -14,6 +14,7 @@ import {
   alpha,
   Stack,
   Chip,
+  ButtonBase,
 } from '@mui/material';
 import React from 'react';
 
@@ -59,7 +60,7 @@ const MiniPlayer: React.FC = () => {
           borderBottom: 'none',
           borderTopLeftRadius: 16,
           borderTopRightRadius: 16,
-          cursor: 'pointer',
+          overflow: 'hidden',
           transition: 'all 0.2s ease',
           '&:hover': {
             bgcolor: alpha(theme.palette.background.paper, 0.98),
@@ -67,237 +68,346 @@ const MiniPlayer: React.FC = () => {
             boxShadow: `0 12px 32px ${alpha(theme.palette.primary.main, 0.15)}`,
           },
         }}
-        onClick={handleExpand}
       >
-        {/* Progress Bar */}
-        <LinearProgress
-          variant="determinate"
-          value={progress}
+        <ButtonBase
+          onClick={handleExpand}
+          disableRipple={false}
           sx={{
-            height: 3,
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'stretch',
+            justifyContent: 'flex-start',
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
-            bgcolor: alpha(theme.palette.divider, 0.2),
-            '& .MuiLinearProgress-bar': {
-              bgcolor: theme.palette.primary.main,
-              borderTopLeftRadius: 16,
-              borderTopRightRadius: 16,
+            position: 'relative',
+            overflow: 'hidden',
+            '& .MuiTouchRipple-root': {
+              color: alpha(theme.palette.primary.main, 0.2),
+              '& .MuiTouchRipple-child': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.3),
+              },
             },
-          }}
-        />
-
-        {/* Main Content */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            p: { xs: 1.5, sm: 2.5 },
-            gap: { xs: 1.5, sm: 2 },
+            '&:active': {
+              transform: 'scale(0.98)',
+            },
+            transition: 'transform 0.1s cubic-bezier(0.4, 0, 0.6, 1)',
           }}
         >
-          {/* Story Cover */}
-          <Paper
-            elevation={0}
+          {/* Progress Bar */}
+          <LinearProgress
+            variant="determinate"
+            value={progress}
             sx={{
-              position: 'relative',
-              borderRadius: 3,
-              overflow: 'hidden',
-              width: { xs: 48, sm: 56 },
-              height: { xs: 48, sm: 56 },
-              bgcolor: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-              border: `2px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+              height: 3,
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              bgcolor: alpha(theme.palette.divider, 0.2),
+              '& .MuiLinearProgress-bar': {
+                bgcolor: theme.palette.primary.main,
+                borderTopLeftRadius: 16,
+                borderTopRightRadius: 16,
+              },
+            }}
+          />
+
+          {/* Main Content */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              p: { xs: 1.5, sm: 2.5 },
+              gap: { xs: 1.5, sm: 2 },
             }}
           >
-            <Avatar
-              variant="square"
-              src={state.currentStory.coverUrl}
+            {/* Story Cover */}
+            <ButtonBase
+              disableRipple={false}
               sx={{
-                width: '100%',
-                height: '100%',
-                borderRadius: 0,
-              }}
-            >
-              {!state.currentStory.coverUrl && (
-                <Iconify
-                  icon="material-symbols:library-books"
-                  width={24}
-                  height={24}
-                  sx={{ color: 'white' }}
-                />
-              )}
-            </Avatar>
-          </Paper>
-
-          {/* Story Info */}
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography
-              variant="body2"
-              sx={{
-                fontWeight: 700,
-                color: theme.palette.text.primary,
+                borderRadius: 3,
                 overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                mb: 0.5,
-                fontSize: { xs: '0.85rem', sm: '0.875rem' },
+                width: { xs: 48, sm: 56 },
+                height: { xs: 48, sm: 56 },
+                position: 'relative',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                '& .MuiTouchRipple-root': {
+                  color: alpha(theme.palette.primary.main, 0.2),
+                  '& .MuiTouchRipple-child': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.3),
+                  },
+                },
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
+                },
+                '&:active': {
+                  transform: 'scale(0.95)',
+                },
               }}
             >
-              {state.currentStory.title || 'Unknown Title'}
-            </Typography>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography
-                variant="caption"
+              <Paper
+                elevation={0}
                 sx={{
-                  color: theme.palette.text.secondary,
+                  position: 'absolute',
+                  inset: 0,
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                  bgcolor: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  border: `2px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                  pointerEvents: 'none',
+                }}
+              >
+                <Avatar
+                  variant="square"
+                  src={state.currentStory.coverUrl}
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: 0,
+                  }}
+                >
+                  {!state.currentStory.coverUrl && (
+                    <Iconify
+                      icon="material-symbols:library-books"
+                      width={24}
+                      height={24}
+                      sx={{ color: 'white' }}
+                    />
+                  )}
+                </Avatar>
+              </Paper>
+            </ButtonBase>
+
+            {/* Story Info */}
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 700,
+                  color: theme.palette.text.primary,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  fontWeight: 500,
-                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                  mb: 0.5,
+                  fontSize: { xs: '0.85rem', sm: '0.875rem' },
                 }}
               >
-                {state.currentStory.creator || 'Unknown Creator'}
+                {state.currentStory.title || 'Unknown Title'}
               </Typography>
-              <Chip
-                label={state.isPlaying ? 'Playing' : 'Paused'}
-                size="small"
-                sx={{
-                  height: { xs: 14, sm: 16 },
-                  fontSize: { xs: '0.6rem', sm: '0.65rem' },
-                  bgcolor: state.isPlaying
-                    ? alpha(theme.palette.success.main, 0.1)
-                    : alpha(theme.palette.text.secondary, 0.1),
-                  color: state.isPlaying
-                    ? theme.palette.success.main
-                    : theme.palette.text.secondary,
-                  fontWeight: 600,
-                  display: { xs: 'none', sm: 'inline-flex' },
-                }}
-              />
-            </Stack>
-          </Box>
-
-          {/* Control Buttons */}
-          <Stack direction="row" alignItems="center" spacing={{ xs: 0.25, sm: 0.5 }}>
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                previousStory();
-              }}
-              sx={{
-                color: theme.palette.text.secondary,
-                bgcolor: alpha(theme.palette.text.primary, 0.05),
-                display: { xs: 'none', sm: 'inline-flex' },
-                '&:hover': {
-                  bgcolor: alpha(theme.palette.text.primary, 0.08),
-                  color: theme.palette.text.primary,
-                  transform: 'scale(1.1)',
-                },
-              }}
-            >
-              <SkipPrevious sx={{ fontSize: '1.2rem' }} />
-            </IconButton>
-
-            {state.isLoading || state.isBuffering ? (
-              <Paper
-                elevation={0}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: { xs: 40, sm: 48 },
-                  height: { xs: 40, sm: 48 },
-                  borderRadius: '50%',
-                  bgcolor: theme.palette.primary.main,
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
-                }}
-              >
-                <CircularProgress
-                  size={20}
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Typography
+                  variant="caption"
                   sx={{
-                    color: theme.palette.primary.contrastText,
+                    color: theme.palette.text.secondary,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    fontWeight: 500,
+                    fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                  }}
+                >
+                  {state.currentStory.creator || 'Unknown Creator'}
+                </Typography>
+                <Chip
+                  label={state.isPlaying ? 'Playing' : 'Paused'}
+                  size="small"
+                  sx={{
+                    height: { xs: 14, sm: 16 },
+                    fontSize: { xs: '0.6rem', sm: '0.65rem' },
+                    bgcolor: state.isPlaying
+                      ? alpha(theme.palette.success.main, 0.1)
+                      : alpha(theme.palette.text.secondary, 0.1),
+                    color: state.isPlaying
+                      ? theme.palette.success.main
+                      : theme.palette.text.secondary,
+                    fontWeight: 600,
+                    display: { xs: 'none', sm: 'inline-flex' },
                   }}
                 />
-              </Paper>
-            ) : (
-              <Paper
-                elevation={0}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: { xs: 40, sm: 48 },
-                  height: { xs: 40, sm: 48 },
-                  borderRadius: '50%',
-                  bgcolor: theme.palette.primary.main,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
-                  '&:hover': {
-                    bgcolor: theme.palette.primary.dark,
-                    transform: 'scale(1.05)',
-                    boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.4)}`,
-                  },
-                }}
+              </Stack>
+            </Box>
+
+            {/* Control Buttons */}
+            <Stack direction="row" alignItems="center" spacing={{ xs: 0.25, sm: 0.5 }}>
+              <IconButton
+                size="small"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handlePlayPause();
+                  previousStory();
+                }}
+                disableRipple={false}
+                sx={{
+                  color: theme.palette.text.secondary,
+                  bgcolor: alpha(theme.palette.text.primary, 0.05),
+                  display: { xs: 'none', sm: 'inline-flex' },
+                  borderRadius: '50%',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '& .MuiTouchRipple-root': {
+                    color: alpha(theme.palette.primary.main, 0.3),
+                    '& .MuiTouchRipple-child': {
+                      backgroundColor: alpha(theme.palette.primary.main, 0.4),
+                    },
+                  },
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.text.primary, 0.08),
+                    color: theme.palette.text.primary,
+                    transform: 'scale(1.1)',
+                    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
+                  },
+                  '&:active': {
+                    transform: 'scale(0.95)',
+                  },
                 }}
               >
-                {state.isPlaying ? (
-                  <Pause
+                <SkipPrevious sx={{ fontSize: '1.2rem' }} />
+              </IconButton>
+
+              {state.isLoading || state.isBuffering ? (
+                <Paper
+                  elevation={0}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: { xs: 40, sm: 48 },
+                    height: { xs: 40, sm: 48 },
+                    borderRadius: '50%',
+                    bgcolor: theme.palette.primary.main,
+                    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
+                  }}
+                >
+                  <CircularProgress
+                    size={20}
                     sx={{
-                      fontSize: { xs: '1.2rem', sm: '1.4rem' },
                       color: theme.palette.primary.contrastText,
                     }}
                   />
-                ) : (
-                  <PlayArrow
-                    sx={{
-                      fontSize: { xs: '1.2rem', sm: '1.4rem' },
-                      color: theme.palette.primary.contrastText,
-                    }}
-                  />
-                )}
-              </Paper>
-            )}
+                </Paper>
+              ) : (
+                <ButtonBase
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePlayPause();
+                  }}
+                  disableRipple={false}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: { xs: 40, sm: 48 },
+                    height: { xs: 40, sm: 48 },
+                    borderRadius: '50%',
+                    bgcolor: theme.palette.primary.main,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '& .MuiTouchRipple-root': {
+                      color: alpha(theme.palette.primary.contrastText, 0.4),
+                      '& .MuiTouchRipple-child': {
+                        backgroundColor: alpha(theme.palette.primary.contrastText, 0.6),
+                      },
+                      '& .MuiTouchRipple-ripple': {
+                        '& .MuiTouchRipple-child': {
+                          animationDuration: '550ms',
+                        },
+                      },
+                    },
+                    '&:hover': {
+                      bgcolor: theme.palette.primary.dark,
+                      transform: 'scale(1.08)',
+                      boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.5)}`,
+                    },
+                    '&:active': {
+                      transform: 'scale(0.92)',
+                    },
+                  }}
+                >
+                  {state.isPlaying ? (
+                    <Pause
+                      sx={{
+                        fontSize: { xs: '1.2rem', sm: '1.4rem' },
+                        color: theme.palette.primary.contrastText,
+                        zIndex: 1,
+                      }}
+                    />
+                  ) : (
+                    <PlayArrow
+                      sx={{
+                        fontSize: { xs: '1.2rem', sm: '1.4rem' },
+                        color: theme.palette.primary.contrastText,
+                        zIndex: 1,
+                      }}
+                    />
+                  )}
+                </ButtonBase>
+              )}
 
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                nextStory();
-              }}
-              sx={{
-                color: theme.palette.text.secondary,
-                bgcolor: alpha(theme.palette.text.primary, 0.05),
-                display: { xs: 'none', sm: 'inline-flex' },
-                '&:hover': {
-                  bgcolor: alpha(theme.palette.text.primary, 0.08),
-                  color: theme.palette.text.primary,
-                  transform: 'scale(1.1)',
-                },
-              }}
-            >
-              <SkipNext sx={{ fontSize: '1.2rem' }} />
-            </IconButton>
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  nextStory();
+                }}
+                disableRipple={false}
+                sx={{
+                  color: theme.palette.text.secondary,
+                  bgcolor: alpha(theme.palette.text.primary, 0.05),
+                  display: { xs: 'none', sm: 'inline-flex' },
+                  borderRadius: '50%',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '& .MuiTouchRipple-root': {
+                    color: alpha(theme.palette.primary.main, 0.3),
+                    '& .MuiTouchRipple-child': {
+                      backgroundColor: alpha(theme.palette.primary.main, 0.4),
+                    },
+                  },
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.text.primary, 0.08),
+                    color: theme.palette.text.primary,
+                    transform: 'scale(1.1)',
+                    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
+                  },
+                  '&:active': {
+                    transform: 'scale(0.95)',
+                  },
+                }}
+              >
+                <SkipNext sx={{ fontSize: '1.2rem' }} />
+              </IconButton>
 
-            <IconButton
-              size="small"
-              sx={{
-                color: theme.palette.text.secondary,
-                bgcolor: alpha(theme.palette.primary.main, 0.1),
-                '&:hover': {
-                  bgcolor: alpha(theme.palette.primary.main, 0.15),
-                  color: theme.palette.primary.main,
-                },
-              }}
-            >
-              <ExpandLess sx={{ fontSize: { xs: '1rem', sm: '1.2rem' } }} />
-            </IconButton>
-          </Stack>
-        </Box>
+              <IconButton
+                size="small"
+                disableRipple={false}
+                sx={{
+                  color: theme.palette.text.secondary,
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  borderRadius: '50%',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '& .MuiTouchRipple-root': {
+                    color: alpha(theme.palette.primary.main, 0.4),
+                    '& .MuiTouchRipple-child': {
+                      backgroundColor: alpha(theme.palette.primary.main, 0.5),
+                    },
+                  },
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.15),
+                    color: theme.palette.primary.main,
+                    transform: 'scale(1.1)',
+                    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
+                  },
+                  '&:active': {
+                    transform: 'scale(0.95)',
+                  },
+                }}
+              >
+                <ExpandLess sx={{ fontSize: { xs: '1rem', sm: '1.2rem' } }} />
+              </IconButton>
+            </Stack>
+          </Box>
+        </ButtonBase>
       </Paper>
     </Slide>
   );

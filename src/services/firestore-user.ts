@@ -1,7 +1,7 @@
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 import { getDbInstance } from '@/lib/firebase';
-import { User, PurchaseDetails } from '@/types/audio-story';
+import { User, PurchaseDetails, DonationDetails } from '@/types/audio-story';
 
 // User service functions
 export const userService = {
@@ -70,5 +70,80 @@ export const purchaseService = {
     const purchaseRef = doc(getDbInstance(), 'purchases', purchaseData.paymentId);
     await setDoc(purchaseRef, purchaseData);
     return purchaseData.paymentId;
+  },
+};
+
+// Donation service functions
+export const donationService = {
+  // Store donation details in firestore
+  async storeDonation(
+    donationData: DonationDetails & {
+      userId: string;
+      userEmail: string;
+      userName?: string;
+    }
+  ): Promise<string> {
+    if (!getDbInstance()) throw new Error('Firebase not initialized');
+
+    // Store in donations collection
+    const donationsRef = collection(getDbInstance(), 'donations');
+    const donationDoc = await addDoc(donationsRef, {
+      ...donationData,
+      createdAt: serverTimestamp(),
+    });
+
+    // Also store in payment history collection for the story
+    const paymentHistoryRef = collection(
+      getDbInstance(),
+      'stories',
+      donationData.storyId,
+      'paymentHistory'
+    );
+    await addDoc(paymentHistoryRef, {
+      type: 'donation',
+      userId: donationData.userId,
+      userEmail: donationData.userEmail,
+      userName: donationData.userName || 'Anonymous',
+      amount: donationData.amount,
+      currency: donationData.currency,
+      paymentId: donationData.paymentId,
+      orderId: donationData.orderId,
+      timestamp: donationData.timestamp,
+      createdAt: serverTimestamp(),
+    });
+
+    return donationDoc.id;
+  },
+
+  // Store purchase in story's payment history (for analytics)
+  async storePurchaseHistory(
+    purchaseData: PurchaseDetails & {
+      userId: string;
+      userEmail: string;
+      userName?: string;
+      trackTitle: string;
+      trackArtist: string;
+    }
+  ): Promise<void> {
+    if (!getDbInstance()) throw new Error('Firebase not initialized');
+
+    const paymentHistoryRef = collection(
+      getDbInstance(),
+      'stories',
+      purchaseData.storyId,
+      'paymentHistory'
+    );
+    await addDoc(paymentHistoryRef, {
+      type: 'purchase',
+      userId: purchaseData.userId,
+      userEmail: purchaseData.userEmail,
+      userName: purchaseData.userName || 'Anonymous',
+      amount: purchaseData.amount,
+      currency: purchaseData.currency,
+      paymentId: purchaseData.paymentId,
+      orderId: purchaseData.orderId,
+      timestamp: purchaseData.timestamp,
+      createdAt: serverTimestamp(),
+    });
   },
 };

@@ -1,7 +1,6 @@
 'use client';
 
-import { ArrowBack } from '@mui/icons-material';
-import { Box, Button, CircularProgress, Paper, Typography } from '@mui/material';
+import { Box, CircularProgress, Paper, Typography } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 
@@ -78,19 +77,7 @@ export default function AdminEditStoryView({ storyId }: AdminEditStoryViewProps)
 
   return (
     <>
-      <Toolbar
-        title={`Edit: ${story?.title || 'Story'}`}
-        showBackButton={true}
-        singleAction={
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBack />}
-            onClick={() => router.push('/admin')}
-          >
-            Back to Admin
-          </Button>
-        }
-      />
+      <Toolbar title={`Edit: ${story?.title || 'Story'}`} showBackButton={true} />
       <Box sx={{ pt: { xs: 9, sm: 12 }, pb: 4, px: { xs: 2, sm: 3, md: 4 } }}>
         <StoryForm mode="edit" storyId={storyId} story={story} onSuccess={handleSuccess} />
       </Box>

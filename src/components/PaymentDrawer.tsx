@@ -1,6 +1,13 @@
 'use client';
 
-import { Payment, MusicNote, CheckCircle, Shield } from '@mui/icons-material';
+import {
+  Payment,
+  MusicNote,
+  CheckCircle,
+  Shield,
+  PlayArrow,
+  VolunteerActivism,
+} from '@mui/icons-material';
 import {
   Drawer,
   Box,
@@ -14,6 +21,8 @@ import {
   useTheme,
   alpha,
   Chip,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
 import React from 'react';
 import { RazorpayOrderOptions, useRazorpay } from 'react-razorpay';
@@ -22,13 +31,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useApi } from '@/hooks/use-api-query-hook';
 import { paymentApi } from '@/services/api';
-import { AudioStory } from '@/types/audio-story';
+import { donationService, purchaseService } from '@/services/firestore-user';
+import { AudioStory, DonationDetails } from '@/types/audio-story';
 
 interface PaymentDrawerProps {
   open: boolean;
   onClose: () => void;
   story: AudioStory | null;
   onPaymentSuccess: () => void;
+  onSkipPayment?: () => void; // New prop for free play
+  isDonation?: boolean; // New prop to indicate donation flow
 }
 
 const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
@@ -36,6 +48,8 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
   onClose,
   story,
   onPaymentSuccess,
+  onSkipPayment,
+  isDonation = false,
 }) => {
   const theme = useTheme();
   const { Razorpay } = useRazorpay();
@@ -47,14 +61,89 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
     mutationFn: (variables: unknown) => paymentApi.createOrder(variables as number),
   });
 
-  const handlePayment = async () => {
-    if (!user) {
-      showError('Please sign in to make a purchase');
+  // Donation-related state
+  const [selectedAmount, setSelectedAmount] = React.useState<number | null>(null);
+  const [customAmount, setCustomAmount] = React.useState<string>('');
+  const [isCustomAmountValid, setIsCustomAmountValid] = React.useState<boolean>(true);
+
+  // Predefined donation amounts
+  const donationAmounts = [10, 100, 200, 500, 1000];
+
+  // Reset state when drawer opens/closes
+  React.useEffect(() => {
+    if (!open) {
+      setSelectedAmount(null);
+      setCustomAmount('');
+      setIsCustomAmountValid(true);
+    }
+  }, [open]);
+
+  // Handle chip selection
+  const handleChipSelect = (amount: number) => {
+    setSelectedAmount(amount);
+    setCustomAmount('');
+  };
+
+  // Handle custom amount input
+  const handleCustomAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setCustomAmount(value);
+    setSelectedAmount(null);
+
+    if (value === '') {
+      setIsCustomAmountValid(true);
       return;
     }
 
+    const numValue = parseFloat(value);
+    const minAmount = story?.amount || 5;
+    const isValid = !isNaN(numValue) && numValue >= minAmount;
+    setIsCustomAmountValid(isValid);
+  };
+
+  // Get the final amount to be paid
+  const getFinalAmount = (): number => {
+    if (isDonation) {
+      if (selectedAmount) return selectedAmount;
+      if (customAmount && isCustomAmountValid) {
+        return parseFloat(customAmount);
+      }
+      return 0;
+    }
+    return story?.amount || 5;
+  };
+
+  const handleSkip = () => {
+    // Play story for free without affecting purchase history
+    if (onSkipPayment) {
+      onSkipPayment();
+    }
+    onClose();
+  };
+
+  const handlePayment = async () => {
+    if (!user) {
+      showError(`Please sign in to make a ${isDonation ? 'donation' : 'purchase'}`);
+      return;
+    }
+
+    if (isDonation) {
+      const finalAmount = getFinalAmount();
+      if (finalAmount <= 0) {
+        showError('Please select or enter a valid donation amount');
+        return;
+      }
+
+      const minAmount = story?.amount || 5;
+      if (finalAmount < minAmount) {
+        showError(`Minimum donation amount is ₹${minAmount}`);
+        return;
+      }
+    }
+
     try {
-      const orderResponse = await createOrderMutation.mutateAsync(story?.amount || 5);
+      const paymentAmount = getFinalAmount();
+      const orderResponse = await createOrderMutation.mutateAsync(paymentAmount);
       const order = orderResponse.data;
 
       if (!window.Razorpay) {
@@ -69,20 +158,57 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
         amount: (order as { id: string; amount: number; currency: string }).amount,
         currency: (order as { id: string; amount: number; currency: string }).currency as 'INR',
         name: 'Rainbow Media',
-        description: `Purchase: ${story?.title} by ${story?.creator}`,
-        order_id: (order as { id: string; amount: number; currency: string }).id, // Generate order_id on server
+        description: isDonation
+          ? `Support Creator: ${story?.creator} for "${story?.title}"`
+          : `Purchase: ${story?.title} by ${story?.creator}`,
+        order_id: (order as { id: string; amount: number; currency: string }).id,
         handler: async (response) => {
           try {
-            // Add purchase to user's account
-            if (story?.id) {
-              await addPurchase(story.id);
+            if (isDonation) {
+              // Save donation history
+              const donationData: DonationDetails = {
+                storyId: story!.id,
+                creatorName: story!.creator,
+                storyTitle: story!.title,
+                amount: paymentAmount,
+                currency: 'INR',
+                paymentId: response.razorpay_payment_id,
+                orderId: response.razorpay_order_id,
+                timestamp: Date.now(),
+                type: 'donation',
+              };
+
+              await donationService.storeDonation({
+                ...donationData,
+                userId: user!.uid,
+                userEmail: user!.email,
+                userName: user!.displayName,
+              });
+            } else {
+              // Add purchase to user's account and save purchase history
+              if (story?.id) {
+                await addPurchase(story.id);
+
+                // Also save purchase history for analytics
+                await purchaseService.storePurchaseDetails({
+                  storyId: story.id,
+                  amount: paymentAmount,
+                  currency: 'INR',
+                  paymentId: response.razorpay_payment_id,
+                  orderId: response.razorpay_order_id,
+                  timestamp: Date.now(),
+                  userId: user!.uid,
+                  trackTitle: story.title,
+                  trackArtist: story.creator,
+                });
+              }
             }
             console.log('Payment successful:', response);
             onPaymentSuccess();
             onClose();
           } catch (error) {
             console.error('Error processing payment:', error);
-            showError('Payment successful but failed to update account. Please contact support.');
+            showError(`Payment successful but failed to update account. Please contact support.`);
           }
         },
         prefill: {
@@ -91,7 +217,7 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
           contact: '',
         },
         theme: {
-          color: '#F37254',
+          color: isDonation ? '#ff9800' : '#F37254',
         },
       };
 
@@ -146,8 +272,10 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
             p: 3,
             mb: 3,
             borderRadius: 3,
-            bgcolor: alpha(theme.palette.primary.main, 0.05),
-            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+            bgcolor: isDonation ? alpha('#ff9800', 0.05) : alpha(theme.palette.primary.main, 0.05),
+            border: isDonation
+              ? `1px solid ${alpha('#ff9800', 0.1)}`
+              : `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
           }}
         >
           <Stack direction="row" spacing={3} alignItems="center">
@@ -158,60 +286,144 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                 width: 60,
                 height: 60,
                 borderRadius: 2,
-                bgcolor: theme.palette.primary.main,
+                bgcolor: isDonation ? '#ff9800' : theme.palette.primary.main,
               }}
             >
-              <MusicNote />
+              {isDonation ? <VolunteerActivism /> : <MusicNote />}
             </Avatar>
 
             <Box flex={1}>
               <Typography variant="h6" fontWeight={600} gutterBottom>
-                {story.title}
+                {isDonation ? `Support ${story.creator}` : story.title}
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                {story.creator} • {story.series}
+                {isDonation ? `For: ${story.title}` : `${story.creator} • ${story.series}`}
               </Typography>
               <Stack direction="row" spacing={1} alignItems="center">
                 <Chip
-                  label="Premium"
+                  label={isDonation ? 'Support Creator' : 'Premium'}
                   size="small"
                   sx={{
-                    bgcolor: alpha(theme.palette.warning.main, 0.1),
-                    color: theme.palette.warning.main,
+                    bgcolor: isDonation
+                      ? alpha('#ff9800', 0.1)
+                      : alpha(theme.palette.warning.main, 0.1),
+                    color: isDonation ? '#ff9800' : theme.palette.warning.main,
                   }}
                 />
               </Stack>
             </Box>
 
-            <Box textAlign="right">
-              <Typography variant="h5" fontWeight={700} color="primary">
-                ₹{story.amount || 5}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                One-time purchase
-              </Typography>
-            </Box>
+            {!isDonation && (
+              <Box textAlign="right">
+                <Typography variant="h5" fontWeight={700} color="primary">
+                  ₹{story.amount || 5}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  One-time purchase
+                </Typography>
+              </Box>
+            )}
           </Stack>
         </Paper>
 
+        {/* Donation Amount Selection */}
+        {isDonation && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              mb: 3,
+              borderRadius: 3,
+              bgcolor: alpha('#ff9800', 0.03),
+              border: `1px solid ${alpha('#ff9800', 0.1)}`,
+            }}
+          >
+            <Typography variant="h6" fontWeight={600} gutterBottom sx={{ color: '#ff9800' }}>
+              Choose your support amount:
+            </Typography>
+
+            {/* Predefined Amount Chips */}
+            <Stack direction="row" spacing={1} sx={{ mb: 3, flexWrap: 'wrap', gap: 1 }}>
+              {donationAmounts.map((amount) => (
+                <Chip
+                  key={amount}
+                  label={`₹${amount}`}
+                  clickable
+                  variant={selectedAmount === amount ? 'filled' : 'outlined'}
+                  onClick={() => handleChipSelect(amount)}
+                  sx={{
+                    bgcolor: selectedAmount === amount ? '#ff9800' : 'transparent',
+                    color: selectedAmount === amount ? '#fff' : '#ff9800',
+                    borderColor: '#ff9800',
+                    '&:hover': {
+                      bgcolor: selectedAmount === amount ? '#f57c00' : alpha('#ff9800', 0.08),
+                    },
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                  }}
+                />
+              ))}
+            </Stack>
+
+            {/* Custom Amount Input */}
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Or enter a custom amount (minimum ₹{story.amount || 5}):
+            </Typography>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Enter amount"
+              value={customAmount}
+              onChange={handleCustomAmountChange}
+              error={!isCustomAmountValid && customAmount !== ''}
+              helperText={
+                !isCustomAmountValid && customAmount !== ''
+                  ? `Minimum amount is ₹${story.amount || 5}`
+                  : ''
+              }
+              slotProps={{
+                input: {
+                  startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                },
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#ff9800',
+                  },
+                },
+              }}
+            />
+          </Paper>
+        )}
+
         {/* Features */}
         <Typography variant="h6" fontWeight={600} gutterBottom>
-          What you'll get:
+          {isDonation ? 'Your contribution helps:' : "What you'll get:"}
         </Typography>
 
         <Stack spacing={2} sx={{ mb: 4 }}>
-          {[
-            { icon: CheckCircle, text: 'Unlimited plays of this story' },
-            { icon: MusicNote, text: 'High-quality 320kbps audio' },
-            { icon: Shield, text: 'Secure payment via Razorpay' },
-          ].map((feature, index) => (
+          {(isDonation
+            ? [
+                { icon: VolunteerActivism, text: 'Support content creators directly' },
+                { icon: MusicNote, text: 'Encourage more quality content' },
+                { icon: Shield, text: 'Secure payment via Razorpay' },
+              ]
+            : [
+                { icon: CheckCircle, text: 'Unlimited plays of this story' },
+                { icon: MusicNote, text: 'High-quality 320kbps audio' },
+                { icon: Shield, text: 'Secure payment via Razorpay' },
+              ]
+          ).map((feature, index) => (
             <Stack key={index} direction="row" alignItems="center" spacing={2}>
               <Avatar
                 sx={{
                   width: 24,
                   height: 24,
-                  bgcolor: alpha(theme.palette.success.main, 0.1),
-                  color: theme.palette.success.main,
+                  bgcolor: isDonation
+                    ? alpha('#ff9800', 0.1)
+                    : alpha(theme.palette.success.main, 0.1),
+                  color: isDonation ? '#ff9800' : theme.palette.success.main,
                 }}
               >
                 <feature.icon sx={{ fontSize: 14 }} />
@@ -234,25 +446,76 @@ const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
             startIcon={
               createOrderMutation.isPending ? (
                 <CircularProgress size={20} sx={{ color: 'inherit' }} />
+              ) : isDonation ? (
+                <VolunteerActivism />
               ) : (
                 <Payment />
               )
             }
             onClick={handlePayment}
-            disabled={createOrderMutation.isPending}
+            disabled={
+              createOrderMutation.isPending ||
+              (isDonation && getFinalAmount() <= 0) ||
+              (isDonation && customAmount !== '' && !isCustomAmountValid)
+            }
             sx={{
               py: 1.5,
               borderRadius: 3,
               fontWeight: 600,
               fontSize: '1rem',
-              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              background: isDonation
+                ? `linear-gradient(135deg, #ff9800, #f57c00)`
+                : `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
               '&:hover': {
-                background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+                background: isDonation
+                  ? `linear-gradient(135deg, #f57c00, #ef6c00)`
+                  : `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+              },
+              '&:disabled': {
+                opacity: 0.6,
               },
             }}
           >
-            {createOrderMutation.isPending ? 'Processing...' : `Pay ₹${story.amount || 5} Now`}
+            {createOrderMutation.isPending
+              ? 'Processing...'
+              : isDonation
+                ? getFinalAmount() > 0
+                  ? `Support with ₹${getFinalAmount()}`
+                  : 'Select amount to support'
+                : `Pay ₹${story.amount || 5} Now`}
           </Button>
+
+          {onSkipPayment && !isDonation && (
+            <Button
+              fullWidth
+              variant="outlined"
+              size="large"
+              startIcon={<PlayArrow />}
+              onClick={handleSkip}
+              sx={{
+                py: 1.5,
+                borderRadius: 3,
+                fontWeight: 500,
+                fontSize: '0.95rem',
+                color: alpha(theme.palette.text.secondary, 0.8),
+                borderColor: alpha(theme.palette.divider, 0.3),
+                bgcolor: alpha(theme.palette.background.paper, 0.5),
+                '&:hover': {
+                  bgcolor: alpha(theme.palette.text.secondary, 0.04),
+                  borderColor: alpha(theme.palette.text.secondary, 0.2),
+                  color: theme.palette.text.secondary,
+                  transform: 'translateY(-1px)',
+                  boxShadow: `0 4px 12px ${alpha(theme.palette.text.secondary, 0.15)}`,
+                },
+                '&:active': {
+                  transform: 'translateY(0px)',
+                },
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
+              Play for Free (Limited Experience)
+            </Button>
+          )}
 
           <Button
             fullWidth

@@ -54,7 +54,7 @@ import {
   LICENSE_OPTIONS,
   CURRENCY_OPTIONS,
 } from '@/schemas/uploadSchema';
-import { adminApi, uploadApi } from '@/services/api';
+import { storyManagementApi } from '@/services/api';
 import { AudioStory } from '@/types/audio-story';
 
 export interface StoryFormProps {
@@ -94,17 +94,25 @@ export default function StoryForm({ mode, story, storyId, onSuccess, onCancel }:
     handleSubmit,
     watch,
     setValue,
-    formState: { errors, isValid, isDirty },
+    formState: { errors, isValid },
     trigger,
     reset,
   } = useForm<UploadStoryFormData>({
     resolver: zodResolver(formSchema) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     defaultValues: {
+      title: '',
+      series: '',
+      description: '',
       isPaid: false,
       currency: 'INR',
       license: 'all_rights_reserved',
       isExplicit: false,
       genres: [],
+      duration: 0,
+      ...(isEditMode &&
+        {
+          // In edit mode, we don't need audioFile validation
+        }),
     },
     mode: 'onChange',
   });
@@ -114,27 +122,33 @@ export default function StoryForm({ mode, story, storyId, onSuccess, onCancel }:
   // Load story data for edit mode
   useEffect(() => {
     if (isEditMode && story) {
-      setValue('title', story.title);
-      setValue('series', story.series);
-      setValue('description', (story as any).description || ''); // eslint-disable-line @typescript-eslint/no-explicit-any
-      setValue('isPaid', story.paid || false);
-      setValue('price', story.amount || undefined);
-      setValue('currency', (story.currency as 'INR' | 'USD' | 'EUR') || 'INR');
-      setValue('license', (story as any).license || 'all_rights_reserved'); // eslint-disable-line @typescript-eslint/no-explicit-any
-      setValue('rightsOwner', (story as any).rightsOwner || ''); // eslint-disable-line @typescript-eslint/no-explicit-any
-      setValue('isExplicit', (story as any).isExplicit || false); // eslint-disable-line @typescript-eslint/no-explicit-any
-      setValue('episodeNumber', (story as any).episodeNumber || undefined); // eslint-disable-line @typescript-eslint/no-explicit-any
-      setValue('storyType', (story as any).storyType || ''); // eslint-disable-line @typescript-eslint/no-explicit-any
-      setValue('duration', story.duration || 0);
+      // Reset form with story data to set as default values
+      const resetData = {
+        title: story.title,
+        series: story.series,
+        description: (story as any).description || '', // eslint-disable-line @typescript-eslint/no-explicit-any
+        isPaid: story.paid || false,
+        price: story.amount || undefined,
+        currency: (story.currency as 'INR' | 'USD' | 'EUR') || 'INR',
+        license: (story as any).license || 'all_rights_reserved', // eslint-disable-line @typescript-eslint/no-explicit-any
+        rightsOwner: (story as any).rightsOwner || '', // eslint-disable-line @typescript-eslint/no-explicit-any
+        isExplicit: (story as any).isExplicit || false, // eslint-disable-line @typescript-eslint/no-explicit-any
+        episodeNumber: (story as any).episodeNumber || undefined, // eslint-disable-line @typescript-eslint/no-explicit-any
+        storyType: (story as any).storyType || '', // eslint-disable-line @typescript-eslint/no-explicit-any
+        duration: story.duration || 0,
+        genres: Array.isArray((story as any).genres) // eslint-disable-line @typescript-eslint/no-explicit-any
+          ? (story as any).genres // eslint-disable-line @typescript-eslint/no-explicit-any
+          : story.genre
+            ? [story.genre]
+            : [],
+      };
 
-      // Set genres
-      const storyGenres = Array.isArray((story as any).genres) // eslint-disable-line @typescript-eslint/no-explicit-any
-        ? (story as any).genres // eslint-disable-line @typescript-eslint/no-explicit-any
-        : story.genre
-          ? [story.genre]
-          : [];
+      // Reset form with story data to properly set isDirty state
+      reset(resetData);
+
+      // Set genres state
+      const storyGenres = resetData.genres;
       setGenres(storyGenres);
-      setValue('genres', storyGenres);
 
       // Set cover preview if exists
       if (story.coverUrl) {
@@ -146,7 +160,7 @@ export default function StoryForm({ mode, story, storyId, onSuccess, onCancel }:
         setAudioPreviewUrl(story.audioUrl);
       }
     }
-  }, [isEditMode, story, setValue]);
+  }, [isEditMode, story, reset]);
 
   // Handle audio file selection (create mode only)
   const handleAudioFileSelect = useCallback(
@@ -205,13 +219,13 @@ export default function StoryForm({ mode, story, storyId, onSuccess, onCancel }:
     [genres, setValue]
   );
 
-  // API mutations
-  const uploadStoryMutation = useApiMutation({
-    mutationFn: (variables: unknown) => uploadApi.uploadStory(variables as FormData),
+  // API mutations - unified story management
+  const createStoryMutation = useApiMutation({
+    mutationFn: (variables: unknown) => storyManagementApi.createStory(variables as FormData),
     onSuccess: (response) => {
-      const data = response.data as { success: boolean; message: string; story?: AudioStory };
+      const data = response.data as { success: boolean; message: string; data?: AudioStory };
       setUploadProgress(100);
-      onSuccess?.(data.message || 'Story uploaded successfully!');
+      onSuccess?.(data.message || 'Story created successfully!');
     },
     onError: (error) => {
       console.error('Upload failed:', error);
@@ -221,22 +235,12 @@ export default function StoryForm({ mode, story, storyId, onSuccess, onCancel }:
     },
   });
 
-  const uploadCoverMutation = useApiMutation({
-    mutationFn: (variables: unknown) => uploadApi.uploadCoverImage(variables as FormData),
-  });
-
   const updateStoryMutation = useApiMutation({
-    mutationFn: (variables: unknown) => {
-      const { storyId, data } = variables as {
-        storyId: string;
-        data: Parameters<typeof adminApi.updateStory>[1];
-      };
-      return adminApi.updateStory(storyId, data);
-    },
+    mutationFn: (variables: unknown) => storyManagementApi.updateStory(variables as FormData),
     onSuccess: (response) => {
-      const data = response.data as { success: boolean; message?: string };
+      const data = response.data as { success: boolean; message?: string; data?: AudioStory };
       console.log('Update successful:', data);
-      onSuccess?.('Story updated successfully!');
+      onSuccess?.(data.message || 'Story updated successfully!');
     },
     onError: (error) => {
       console.error('Update failed:', error);
@@ -246,18 +250,23 @@ export default function StoryForm({ mode, story, storyId, onSuccess, onCancel }:
   });
 
   // Determine if any API call is in progress
-  const isApiProcessing =
-    uploadStoryMutation.isPending || updateStoryMutation.isPending || uploadCoverMutation.isPending;
+  const isApiProcessing = createStoryMutation.isPending || updateStoryMutation.isPending;
 
   // Handle form submission
   const onSubmit = async (data: UploadStoryFormData) => {
+    console.log('onSubmit called with data:', data);
+    console.log('isEditMode:', isEditMode);
+    console.log('Form errors:', errors);
+
     try {
       setIsProcessing(true);
 
       if (isEditMode) {
+        console.log('Taking edit mode path');
         // Edit mode logic
         await handleEditSubmit(data);
       } else {
+        console.log('Taking create mode path');
         // Create mode logic
         await handleCreateSubmit(data);
       }
@@ -306,66 +315,73 @@ export default function StoryForm({ mode, story, storyId, onSuccess, onCancel }:
     }, 300);
 
     // Use the mutation to upload
-    uploadStoryMutation.mutate(formData);
+    createStoryMutation.mutate(formData);
     clearInterval(progressInterval);
   };
 
   const handleEditSubmit = async (data: UploadStoryFormData) => {
     if (!storyId) throw new Error('Story ID is required for editing');
 
-    // Prepare update data
-    const updateData = {
-      title: data.title,
-      series: data.series,
-      description: data.description,
-      creator: story?.creator, // Keep existing creator
-      isPaid: data.isPaid,
-      price: data.price,
-      currency: data.currency,
-      genre: data.genres?.[0] || '', // Primary genre
-      genres: data.genres,
-      license: data.license,
-      rightsOwner: data.rightsOwner,
-      isExplicit: data.isExplicit,
-      episodeNumber: data.episodeNumber,
-      storyType: data.storyType,
-      duration: data.duration,
-    };
+    console.log('handleEditSubmit called with data:', data);
+    console.log('Story ID:', storyId);
 
-    // Handle cover image update if new image selected
-    const hasNewCoverImage = data.coverImage instanceof File;
+    // Create FormData for the unified API
+    const formData = new FormData();
 
-    if (hasNewCoverImage && data.coverImage) {
-      const formData = new FormData();
+    // Set edit flag and story ID
+    formData.append('edit', 'true');
+    formData.append('storyId', storyId);
+
+    // Add form fields
+    formData.append('title', data.title);
+    formData.append('series', data.series);
+    if (data.description) formData.append('description', data.description);
+    if (story?.creator) formData.append('creator', story.creator);
+    formData.append('isPaid', data.isPaid.toString());
+    if (data.price) formData.append('price', data.price.toString());
+    formData.append('currency', data.currency);
+    formData.append('license', data.license);
+    if (data.rightsOwner) formData.append('rightsOwner', data.rightsOwner);
+    formData.append('isExplicit', data.isExplicit.toString());
+    if (data.episodeNumber) formData.append('episodeNumber', data.episodeNumber.toString());
+    if (data.storyType) formData.append('storyType', data.storyType);
+    formData.append('genres', JSON.stringify(data.genres));
+    if (data.duration) formData.append('duration', data.duration.toString());
+
+    // Add cover image if new one is selected
+    if (data.coverImage instanceof File) {
       formData.append('coverImage', data.coverImage);
-      formData.append('storyId', storyId);
-
-      try {
-        const uploadResponse = await uploadCoverMutation.mutateAsync(formData);
-        const data = uploadResponse.data as { coverUrl: string };
-        (updateData as any).coverUrl = data.coverUrl; // eslint-disable-line @typescript-eslint/no-explicit-any
-      } catch (error) {
-        console.error('Cover upload failed:', error);
-      }
     }
 
-    // Update story via admin API
-    updateStoryMutation.mutate({ storyId, data: updateData });
+    // Update story via unified API
+    console.log('About to call updateStoryMutation.mutateAsync with FormData');
+    console.log('FormData contents:', Array.from(formData.entries()));
+    await updateStoryMutation.mutateAsync(formData);
+    console.log('updateStoryMutation.mutateAsync completed');
   };
 
   // Step validation
   const validateStep = async (step: number) => {
-    switch (step) {
-      case 0:
-        if (isEditMode) {
+    if (isEditMode) {
+      // In edit mode, be less strict with validation
+      switch (step) {
+        case 0:
           return await trigger(['title', 'series']);
-        } else {
+        case 1:
+          return await trigger(['isPaid']);
+        default:
+          return true;
+      }
+    } else {
+      // Create mode validation
+      switch (step) {
+        case 0:
           return await trigger(['title', 'series', 'audioFile']);
-        }
-      case 1:
-        return await trigger(['isPaid', 'price', 'currency', 'license']);
-      default:
-        return true;
+        case 1:
+          return await trigger(['isPaid', 'price', 'currency', 'license']);
+        default:
+          return true;
+      }
     }
   };
 
@@ -384,7 +400,19 @@ export default function StoryForm({ mode, story, storyId, onSuccess, onCancel }:
   // Handle final submit
   const handleFinalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleSubmit(onSubmit)();
+    console.log('handleFinalSubmit called - Form submission triggered');
+    console.log('Current step:', activeStep, 'Total steps:', steps.length);
+    console.log('Is edit mode:', isEditMode);
+
+    if (isEditMode) {
+      // In edit mode, bypass validation and directly submit
+      console.log('Edit mode: bypassing validation and calling onSubmit directly');
+      const formData = watch(); // Get current form data
+      onSubmit(formData);
+    } else {
+      // In create mode, use validation
+      handleSubmit(onSubmit)();
+    }
   };
 
   // Render step content
@@ -415,7 +443,7 @@ export default function StoryForm({ mode, story, storyId, onSuccess, onCancel }:
           <PricingRightsStep control={control} errors={errors} watchedIsPaid={watchedIsPaid} />
         );
       case 2:
-        return <ReviewStep watch={watch} isEditMode={isEditMode} story={story} isDirty={isDirty} />;
+        return <ReviewStep watch={watch} isEditMode={isEditMode} story={story} />;
       default:
         return null;
     }
@@ -459,7 +487,16 @@ export default function StoryForm({ mode, story, storyId, onSuccess, onCancel }:
 
       {/* Form */}
       <form
-        onSubmit={activeStep === steps.length - 1 ? handleFinalSubmit : (e) => e.preventDefault()}
+        onSubmit={(e) => {
+          console.log('Form onSubmit triggered');
+          console.log('activeStep:', activeStep, 'steps.length - 1:', steps.length - 1);
+          console.log('Will call handleFinalSubmit:', activeStep === steps.length - 1);
+          if (activeStep === steps.length - 1) {
+            handleFinalSubmit(e);
+          } else {
+            e.preventDefault();
+          }
+        }}
       >
         <Paper sx={{ p: 4, borderRadius: 3, mb: 4 }}>{renderStepContent(activeStep)}</Paper>
 
@@ -509,9 +546,27 @@ export default function StoryForm({ mode, story, storyId, onSuccess, onCancel }:
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={!isValid || isProcessing || isApiProcessing || (isEditMode && !isDirty)}
+                  disabled={isProcessing || isApiProcessing || (!isEditMode && !isValid)}
                   startIcon={isEditMode ? <Save /> : <CloudUpload />}
                   sx={{ minWidth: 140 }}
+                  onClick={() => {
+                    console.log('Save button clicked!');
+                    console.log(
+                      'Button disabled state:',
+                      isProcessing || isApiProcessing || (!isEditMode && !isValid)
+                    );
+                    console.log('isProcessing:', isProcessing);
+                    console.log('isApiProcessing:', isApiProcessing);
+                    console.log('isEditMode:', isEditMode);
+                    console.log('isValid:', isValid);
+                    console.log('Current step:', activeStep, 'Last step:', steps.length - 1);
+
+                    // If form submit isn't working, directly call the submit function
+                    if (activeStep === steps.length - 1) {
+                      console.log('Directly calling handleSubmit(onSubmit)');
+                      handleSubmit(onSubmit)();
+                    }
+                  }}
                 >
                   {isProcessing || isApiProcessing
                     ? isEditMode
@@ -1085,10 +1140,9 @@ interface ReviewStepProps {
   watch: UseFormWatch<UploadStoryFormData>;
   isEditMode: boolean;
   story?: AudioStory | null;
-  isDirty: boolean;
 }
 
-const ReviewStep: React.FC<ReviewStepProps> = ({ watch, isEditMode, story, isDirty }) => {
+const ReviewStep: React.FC<ReviewStepProps> = ({ watch, isEditMode, story }) => {
   const theme = useTheme();
   const formData = watch();
 
@@ -1111,17 +1165,11 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ watch, isEditMode, story, isDir
         </Typography>
       </Box>
 
-      {isEditMode && !isDirty && (
-        <Alert severity="info">No changes have been made to this story.</Alert>
-      )}
-
-      {isEditMode && isDirty && (
-        <Alert severity="success">
-          Changes detected! Click "Save Changes" to update the story.
+      {isEditMode ? (
+        <Alert severity="info">
+          Review your story details below and click "Save Changes" to update.
         </Alert>
-      )}
-
-      {!isEditMode && (
+      ) : (
         <Alert severity="info">
           Once uploaded, you can edit most of these details from the admin dashboard.
         </Alert>

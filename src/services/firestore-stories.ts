@@ -595,6 +595,86 @@ export class FirestoreCommentService {
       };
     });
   }
+
+  /**
+   * Update story data
+   * @param storyId - UUID of the story to update
+   * @param updateData - Data to update
+   */
+  static async updateStory(
+    storyId: string,
+    updateData: {
+      title?: string;
+      series?: string;
+      description?: string;
+      creator?: string;
+      isPaid?: boolean;
+      price?: number;
+      currency?: string;
+      genre?: string;
+      genres?: string[];
+      license?: string;
+      rightsOwner?: string;
+      isExplicit?: boolean;
+      episodeNumber?: number;
+      storyType?: string;
+      duration?: number;
+      coverUrl?: string;
+    }
+  ): Promise<AudioStory> {
+    logFirestoreRead('updateStory', 1);
+    const storyRef = doc(getStoriesCollection(), storyId);
+
+    // Get current story data first
+    const storyDoc = await getDoc(storyRef);
+    if (!storyDoc.exists()) {
+      throw new Error('Story not found');
+    }
+
+    const currentData = storyDoc.data() as FirestoreStory;
+
+    // Prepare update data with timestamp
+    const updatedData: Partial<FirestoreStory> = {
+      ...updateData,
+      updatedAt: serverTimestamp() as Timestamp,
+    };
+
+    // Handle paid/price logic
+    if (updateData.isPaid !== undefined) {
+      updatedData.paid = updateData.isPaid;
+      if (!updateData.isPaid) {
+        // If changing to free, remove price
+        updatedData.amount = undefined;
+      } else if (updateData.price !== undefined) {
+        updatedData.amount = updateData.price;
+      }
+    }
+
+    return runTransaction(getDb(), async (transaction) => {
+      // Update the story document
+      transaction.update(storyRef, updatedData);
+
+      // Return the updated story data
+      const updatedStory: AudioStory = {
+        id: storyId,
+        title: updateData.title ?? currentData.title,
+        creator: updateData.creator ?? currentData.creator,
+        series: updateData.series ?? currentData.series,
+        genre: updateData.genre ?? currentData.genre,
+        coverUrl: updateData.coverUrl ?? currentData.coverUrl,
+        audioUrl: currentData.audioUrl,
+        duration: updateData.duration ?? currentData.duration,
+        paid: updateData.isPaid ?? currentData.paid,
+        amount: updateData.isPaid === false ? undefined : (updateData.price ?? currentData.amount),
+        currency: updateData.currency ?? currentData.currency,
+        likeCount: currentData.likeCount,
+        commentCount: currentData.commentCount,
+        isLiked: false, // This will be set by the client based on user context
+      };
+
+      return updatedStory;
+    });
+  }
 }
 
 // Backward compatibility exports

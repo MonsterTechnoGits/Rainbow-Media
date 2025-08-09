@@ -22,12 +22,16 @@ import {
 import React, { useState } from 'react';
 
 import Iconify from '@/components/iconify';
+import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useComments } from '@/contexts/CommentContext';
 import { formatTimeAgo } from '@/data/commentData';
 import { useMobileViewport, getMobileDrawerStyles } from '@/hooks/use-mobile-view-port';
 
 const CommentDrawer: React.FC = () => {
   const { state, closeComments, addComment, likeComment } = useComments();
+  const { user } = useAuth();
+  const { setShowAuthDrawer } = useAudioPlayer();
   const theme = useTheme();
   const [commentText, setCommentText] = useState('');
   const { isMobile } = useMobileViewport();
@@ -40,6 +44,12 @@ const CommentDrawer: React.FC = () => {
 
   const handleSubmitComment = () => {
     if (commentText.trim() && state.currentStoryId) {
+      // Check if user is authenticated before allowing comment posting
+      if (!user) {
+        setShowAuthDrawer(true);
+        return;
+      }
+
       addComment(state.currentStoryId, commentText);
       setCommentText('');
     }
@@ -60,11 +70,13 @@ const CommentDrawer: React.FC = () => {
       slotProps={{
         paper: {
           sx: {
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
+            borderTopLeftRadius: { xs: 16, sm: 24 },
+            borderTopRightRadius: { xs: 16, sm: 24 },
             bgcolor: theme.palette.background.paper,
             backgroundImage: 'none',
             ...getMobileDrawerStyles(isMobile, 85, 50),
+            maxHeight: { xs: '90vh', sm: '85vh' },
+            height: { xs: '90vh', sm: '85vh' },
           },
         },
         backdrop: {
@@ -85,28 +97,36 @@ const CommentDrawer: React.FC = () => {
           direction="row"
           alignItems="center"
           justifyContent="space-between"
-          sx={{ p: 3, pb: 2 }}
+          sx={{ p: { xs: 2, sm: 3 }, pb: { xs: 1.5, sm: 2 } }}
         >
           <Stack direction="row" alignItems="center" spacing={2}>
             <Avatar
               sx={{
                 bgcolor: theme.palette.primary.main,
-                width: 36,
-                height: 36,
+                width: { xs: 32, sm: 36 },
+                height: { xs: 32, sm: 36 },
               }}
             >
-              <Iconify icon="material-symbols:comment" width={20} height={20} />
+              <Iconify
+                icon="material-symbols:comment"
+                width={{ xs: 18, sm: 20 }}
+                height={{ xs: 18, sm: 20 }}
+              />
             </Avatar>
             <Box>
-              <Typography variant="h6" fontWeight={700}>
+              <Typography
+                variant="h6"
+                fontWeight={700}
+                sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}
+              >
                 Comments
               </Typography>
               <Chip
                 label={`${currentComments.length} ${currentComments.length === 1 ? 'comment' : 'comments'}`}
                 size="small"
                 sx={{
-                  height: 18,
-                  fontSize: '0.7rem',
+                  height: { xs: 16, sm: 18 },
+                  fontSize: { xs: '0.65rem', sm: '0.7rem' },
                   bgcolor: alpha(theme.palette.primary.main, 0.1),
                   color: theme.palette.primary.main,
                   fontWeight: 600,
@@ -128,14 +148,14 @@ const CommentDrawer: React.FC = () => {
         </Stack>
 
         {/* Comments List */}
-        <Box sx={{ flex: 1, overflow: 'auto', px: 2 }}>
+        <Box sx={{ flex: 1, overflow: 'auto', px: { xs: 1.5, sm: 2 }, minHeight: 0 }}>
           {currentComments.length === 0 ? (
             <Paper
               elevation={0}
               sx={{
-                p: 6,
-                m: 2,
-                borderRadius: 4,
+                p: { xs: 4, sm: 6 },
+                m: { xs: 1.5, sm: 2 },
+                borderRadius: { xs: 3, sm: 4 },
                 bgcolor: alpha(theme.palette.background.paper, 0.6),
                 border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                 textAlign: 'center',
@@ -144,22 +164,37 @@ const CommentDrawer: React.FC = () => {
               <Stack alignItems="center" spacing={3}>
                 <Avatar
                   sx={{
-                    width: 64,
-                    height: 64,
+                    width: { xs: 48, sm: 64 },
+                    height: { xs: 48, sm: 64 },
                     bgcolor: alpha(theme.palette.primary.main, 0.1),
                     color: theme.palette.primary.main,
                   }}
                 >
-                  <Iconify icon="material-symbols:comment-outline" width={32} height={32} />
+                  <Iconify
+                    icon="material-symbols:comment-outline"
+                    width={{ xs: 24, sm: 32 }}
+                    height={{ xs: 24, sm: 32 }}
+                  />
                 </Avatar>
                 <Box>
                   <Typography
                     variant="h6"
-                    sx={{ color: theme.palette.text.primary, fontWeight: 600, mb: 1 }}
+                    sx={{
+                      color: theme.palette.text.primary,
+                      fontWeight: 600,
+                      mb: 1,
+                      fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                    }}
                   >
                     No comments yet
                   </Typography>
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: theme.palette.text.secondary,
+                      fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                    }}
+                  >
                     Be the first to leave a comment on this track!
                   </Typography>
                 </Box>
@@ -172,9 +207,9 @@ const CommentDrawer: React.FC = () => {
                   <Paper
                     elevation={0}
                     sx={{
-                      mx: 1,
-                      mb: 2,
-                      borderRadius: 3,
+                      mx: { xs: 0.5, sm: 1 },
+                      mb: { xs: 1.5, sm: 2 },
+                      borderRadius: { xs: 2, sm: 3 },
                       bgcolor: alpha(theme.palette.background.paper, 0.8),
                       border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                       transition: 'all 0.2s ease',
@@ -184,13 +219,19 @@ const CommentDrawer: React.FC = () => {
                       },
                     }}
                   >
-                    <ListItem sx={{ py: 2, px: 2.5, alignItems: 'flex-start' }}>
+                    <ListItem
+                      sx={{
+                        py: { xs: 1.5, sm: 2 },
+                        px: { xs: 2, sm: 2.5 },
+                        alignItems: 'flex-start',
+                      }}
+                    >
                       <ListItemAvatar>
                         <Avatar
                           src={comment.userAvatar}
                           sx={{
-                            width: 40,
-                            height: 40,
+                            width: { xs: 32, sm: 40 },
+                            height: { xs: 32, sm: 40 },
                             bgcolor: theme.palette.primary.main,
                             border: `2px solid ${alpha(theme.palette.primary.main, 0.1)}`,
                           }}
@@ -203,7 +244,11 @@ const CommentDrawer: React.FC = () => {
                           <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 1 }}>
                             <Typography
                               variant="subtitle2"
-                              sx={{ fontWeight: 700, color: theme.palette.text.primary }}
+                              sx={{
+                                fontWeight: 700,
+                                color: theme.palette.text.primary,
+                                fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                              }}
                             >
                               {comment.username}
                             </Typography>
@@ -211,8 +256,8 @@ const CommentDrawer: React.FC = () => {
                               label={formatTimeAgo(comment.timestamp)}
                               size="small"
                               sx={{
-                                height: 16,
-                                fontSize: '0.65rem',
+                                height: { xs: 14, sm: 16 },
+                                fontSize: { xs: '0.6rem', sm: '0.65rem' },
                                 bgcolor: alpha(theme.palette.text.secondary, 0.1),
                                 color: theme.palette.text.secondary,
                                 fontWeight: 500,
@@ -228,6 +273,7 @@ const CommentDrawer: React.FC = () => {
                               mt: 0.5,
                               whiteSpace: 'pre-wrap',
                               lineHeight: 1.5,
+                              fontSize: { xs: '0.8rem', sm: '0.875rem' },
                             }}
                           >
                             {comment.text}
@@ -238,8 +284,8 @@ const CommentDrawer: React.FC = () => {
                         <Paper
                           elevation={0}
                           sx={{
-                            p: 1,
-                            borderRadius: 2,
+                            p: { xs: 0.75, sm: 1 },
+                            borderRadius: { xs: 1.5, sm: 2 },
                             bgcolor: comment.isLiked
                               ? alpha(theme.palette.error.main, 0.1)
                               : alpha(theme.palette.text.primary, 0.05),
@@ -257,16 +303,28 @@ const CommentDrawer: React.FC = () => {
                               transform: 'scale(1.05)',
                             },
                           }}
-                          onClick={() => likeComment(comment.id, comment.storyId)}
+                          onClick={() => {
+                            if (!user) {
+                              setShowAuthDrawer(true);
+                              return;
+                            }
+                            likeComment(comment.id, comment.storyId);
+                          }}
                         >
                           <Stack direction="column" alignItems="center" spacing={0.5}>
                             {comment.isLiked ? (
                               <Favorite
-                                sx={{ fontSize: '1rem', color: theme.palette.error.main }}
+                                sx={{
+                                  fontSize: { xs: '0.9rem', sm: '1rem' },
+                                  color: theme.palette.error.main,
+                                }}
                               />
                             ) : (
                               <FavoriteBorder
-                                sx={{ fontSize: '1rem', color: theme.palette.text.secondary }}
+                                sx={{
+                                  fontSize: { xs: '0.9rem', sm: '1rem' },
+                                  color: theme.palette.text.secondary,
+                                }}
                               />
                             )}
                             {comment.likes > 0 && (
@@ -277,7 +335,7 @@ const CommentDrawer: React.FC = () => {
                                     ? theme.palette.error.main
                                     : theme.palette.text.secondary,
                                   fontWeight: 600,
-                                  fontSize: '0.7rem',
+                                  fontSize: { xs: '0.65rem', sm: '0.7rem' },
                                 }}
                               >
                                 {comment.likes}
@@ -299,25 +357,29 @@ const CommentDrawer: React.FC = () => {
         <Paper
           elevation={0}
           sx={{
-            m: 2,
+            m: { xs: 1.5, sm: 2 },
             mt: 1,
-            p: 2.5,
-            borderRadius: 4,
+            p: { xs: 2, sm: 2.5 },
+            borderRadius: { xs: 3, sm: 4 },
             bgcolor: alpha(theme.palette.background.paper, 0.9),
             backdropFilter: 'blur(10px)',
             border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
           }}
         >
-          <Stack direction="row" spacing={1.5} alignItems="flex-end">
+          <Stack direction="row" spacing={{ xs: 1, sm: 1.5 }} alignItems="flex-end">
             <Avatar
               sx={{
-                width: 36,
-                height: 36,
+                width: { xs: 32, sm: 36 },
+                height: { xs: 32, sm: 36 },
                 bgcolor: theme.palette.primary.main,
                 mb: 1,
               }}
             >
-              <Typography variant="body2" fontWeight={700} sx={{ color: 'white' }}>
+              <Typography
+                variant="body2"
+                fontWeight={700}
+                sx={{ color: 'white', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
+              >
                 Y
               </Typography>
             </Avatar>
@@ -325,15 +387,20 @@ const CommentDrawer: React.FC = () => {
               fullWidth
               multiline
               maxRows={4}
-              placeholder="Add a comment..."
+              placeholder={user ? 'Add a comment...' : 'Sign in to add a comment'}
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               onKeyPress={handleKeyPress}
+              onFocus={() => {
+                if (!user) {
+                  setShowAuthDrawer(true);
+                }
+              }}
               variant="outlined"
               size="small"
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  borderRadius: 3,
+                  borderRadius: { xs: 2, sm: 3 },
                   bgcolor: alpha(theme.palette.background.default, 0.8),
                   border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                   '&:hover': {
@@ -345,7 +412,8 @@ const CommentDrawer: React.FC = () => {
                   },
                 },
                 '& .MuiOutlinedInput-input': {
-                  py: 1.5,
+                  py: { xs: 1.25, sm: 1.5 },
+                  fontSize: { xs: '0.9rem', sm: '1rem' },
                 },
               }}
             />
@@ -355,9 +423,9 @@ const CommentDrawer: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 48,
-                height: 48,
-                borderRadius: 3,
+                width: { xs: 40, sm: 48 },
+                height: { xs: 40, sm: 48 },
+                borderRadius: { xs: 2, sm: 3 },
                 bgcolor: commentText.trim()
                   ? theme.palette.primary.main
                   : alpha(theme.palette.text.primary, 0.1),
@@ -375,7 +443,7 @@ const CommentDrawer: React.FC = () => {
             >
               <Send
                 sx={{
-                  fontSize: '1.2rem',
+                  fontSize: { xs: '1.1rem', sm: '1.2rem' },
                   color: commentText.trim() ? 'white' : theme.palette.text.disabled,
                 }}
               />

@@ -31,33 +31,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-// PUT /api/admin/stories/[id] - Update story
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { decodedToken, error } = await verifyToken(request);
-
-    if (error || !decodedToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!decodedToken.isAdmin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
-
-    const { id } = await params;
-
-    // TODO: Implement story update logic
-    console.log('Updating story with id:', id);
-
-    return NextResponse.json({
-      message: 'Story updated successfully',
-      // story: updatedStory,
-    });
-  } catch (error) {
-    console.error('Error updating story:', error);
-    return NextResponse.json({ error: 'Failed to update story' }, { status: 500 });
-  }
-}
+// PUT method removed - use /api/story endpoint with edit=true instead
 
 // DELETE /api/admin/stories/[id] - Delete story with cascade deletion
 export async function DELETE(

@@ -3,6 +3,7 @@
 import { Box, Container, Typography, Button } from '@mui/material';
 import { useState, useEffect, useMemo } from 'react';
 
+import AuthDrawer from '@/components/AuthDrawer';
 import ClientOnly from '@/components/ClientOnly';
 import CommentDrawer from '@/components/CommentDrawer';
 import ExpandedPlayer from '@/components/ExpandedPlayer';
@@ -11,6 +12,7 @@ import MiniPlayer from '@/components/MiniPlayer';
 import SettingsDrawer from '@/components/SettingsDrawer';
 import StoryList from '@/components/StoryList';
 import Toolbar from '@/components/Toolbar';
+import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStoryLikesContext } from '@/contexts/StoryLikesContext';
 import { useApi } from '@/hooks/use-api-query-hook';
@@ -24,6 +26,7 @@ export default function HomePageView() {
   const { user, loading: authLoading } = useAuth();
   const { useApiQuery } = useApi();
   const { initializeLikes } = useStoryLikesContext();
+  const { showAuthDrawer, setShowAuthDrawer } = useAudioPlayer();
 
   // Handle URL-based story loading with authentication
   useUrlStoryLoader();
@@ -105,12 +108,13 @@ export default function HomePageView() {
       <Container
         maxWidth="lg"
         sx={{
-          height: '100vh',
+          height: { xs: '100dvh', sm: '100vh' },
+          maxHeight: { xs: '100dvh', sm: '100vh' },
           display: 'flex',
           flexDirection: 'column',
-          pt: { xs: 9, sm: 12 }, // Responsive padding for toolbar
-          pb: { xs: 8, sm: 10 }, // Responsive padding for mini player
-          px: { xs: 1, sm: 2 },
+          pt: { xs: 8, sm: 10, md: 12 }, // Responsive padding for toolbar
+          pb: { xs: 7, sm: 8, md: 10 }, // Responsive padding for mini player
+          px: { xs: 0.5, sm: 1, md: 2 },
           overflow: 'hidden',
         }}
       >
@@ -133,6 +137,11 @@ export default function HomePageView() {
         <ExpandedPlayer />
         <CommentDrawer />
         <SettingsDrawer open={settingsOpen} onClose={handleSettingsClose} />
+        <AuthDrawer
+          open={showAuthDrawer}
+          onClose={() => setShowAuthDrawer(false)}
+          onAuthSuccess={() => setShowAuthDrawer(false)}
+        />
       </ClientOnly>
     </>
   );

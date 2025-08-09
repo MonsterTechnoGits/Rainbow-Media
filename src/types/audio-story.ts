@@ -49,3 +49,15 @@ export interface PurchaseDetails {
   orderId: string;
   timestamp: number;
 }
+
+export interface DonationDetails {
+  storyId: string;
+  creatorName: string;
+  storyTitle: string;
+  amount: number;
+  currency: string;
+  paymentId: string;
+  orderId: string;
+  timestamp: number;
+  type: 'donation'; // to distinguish from purchases
+}

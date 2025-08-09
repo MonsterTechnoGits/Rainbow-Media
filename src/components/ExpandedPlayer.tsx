@@ -13,6 +13,7 @@ import {
   MoreVert,
   Favorite,
   FavoriteBorder,
+  VolunteerActivism,
 } from '@mui/icons-material';
 import {
   Box,
@@ -31,7 +32,9 @@ import {
 import React from 'react';
 
 import Iconify from '@/components/iconify';
+import PaymentDrawer from '@/components/PaymentDrawer';
 import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useComments } from '@/contexts/CommentContext';
 import { formatDuration } from '@/data/storyData';
 
@@ -47,12 +50,15 @@ const ExpandedPlayer: React.FC = () => {
     seekTo,
     toggleShuffle,
     toggleRepeat,
+    setShowAuthDrawer,
   } = useAudioPlayer();
   const { openComments, likeStory, getStoryLike, getStoryComments, loadStoryData } = useComments();
+  const { user } = useAuth();
 
   const [tempCurrentTime, setTempCurrentTime] = React.useState<number | null>(null);
   const [isLikeAnimating, setIsLikeAnimating] = React.useState<boolean>(false);
   const [coverImageColors, setCoverImageColors] = React.useState<string[]>(['#ff6b35', '#f7931e']);
+  const [paymentDrawerOpen, setPaymentDrawerOpen] = React.useState<boolean>(false);
 
   // Haptic feedback function
   const triggerHaptic = React.useCallback((type: 'light' | 'medium' | 'heavy' = 'light') => {
@@ -184,6 +190,13 @@ const ExpandedPlayer: React.FC = () => {
 
   const handleLikeClick = () => {
     if (state.currentStory) {
+      // Check if user is authenticated
+      if (!user) {
+        triggerHaptic('medium');
+        setShowAuthDrawer(true);
+        return;
+      }
+
       triggerHaptic('heavy');
       setIsLikeAnimating(true);
       likeStory(state.currentStory.id);
@@ -216,6 +229,8 @@ const ExpandedPlayer: React.FC = () => {
       triggerHaptic('light');
       // Use current optimistic state from CommentContext
       const currentStoryLike = getStoryLike(state.currentStory.id);
+
+      // Always allow reading comments - authentication checks will be handled in CommentDrawer
       openComments(state.currentStory.id, {
         likeCount: currentStoryLike.likeCount,
         isLiked: currentStoryLike.isLiked,
@@ -256,6 +271,26 @@ const ExpandedPlayer: React.FC = () => {
     }
   };
 
+  const handleSupportClick = () => {
+    if (state.currentStory) {
+      // Check if user is authenticated
+      if (!user) {
+        triggerHaptic('medium');
+        setShowAuthDrawer(true);
+        return;
+      }
+
+      triggerHaptic('medium');
+      setPaymentDrawerOpen(true);
+    }
+  };
+
+  const handlePaymentSuccess = () => {
+    triggerHaptic('heavy');
+    // Show success feedback or toast
+    console.log('Donation successful!');
+  };
+
   const currentTime = tempCurrentTime !== null ? tempCurrentTime : state.currentTime;
 
   return (
@@ -279,7 +314,8 @@ const ExpandedPlayer: React.FC = () => {
     >
       <Box
         sx={{
-          height: '100vh',
+          height: { xs: '100dvh', sm: '100vh' },
+          maxHeight: { xs: '100dvh', sm: '100vh' },
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
@@ -294,9 +330,10 @@ const ExpandedPlayer: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            p: 2,
-            pt: { xs: 3, sm: 2 },
+            p: { xs: 1.5, sm: 2 },
+            pt: { xs: 2, sm: 2 },
             flexShrink: 0,
+            minHeight: { xs: 48, sm: 56 },
           }}
         >
           <IconButton
@@ -348,9 +385,16 @@ const ExpandedPlayer: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            px: { xs: 3, sm: 4 },
-            py: 2,
+            px: { xs: 1, sm: 2, md: 4 },
+            py: { xs: 0.5, sm: 1, md: 2 },
             position: 'relative',
+            minHeight: { xs: 180, sm: 220, md: 280 }, // Minimum space for cover
+            maxHeight: {
+              xs: 'calc(100dvh - 300px)',
+              sm: 'calc(100vh - 350px)',
+              md: 'calc(100vh - 400px)',
+            }, // Reserve space for other elements
+            overflow: 'hidden', // Prevent any spillover
           }}
         >
           {/* Dynamic Gradient Background */}
@@ -381,14 +425,23 @@ const ExpandedPlayer: React.FC = () => {
           <Fade in={drawerState === 'expanded'} timeout={600}>
             <Box
               sx={{
-                width: '100%',
-                maxWidth: 400,
-                aspectRatio: '1',
-                borderRadius: 2,
+                width: {
+                  xs: 'min(70vw, 220px, calc(100dvh - 320px))',
+                  sm: 'min(60vw, 280px, calc(100vh - 370px))',
+                  md: 'min(50vw, 360px, calc(100vh - 420px))',
+                },
+                height: {
+                  xs: 'min(70vw, 220px, calc(100dvh - 320px))',
+                  sm: 'min(60vw, 280px, calc(100vh - 370px))',
+                  md: 'min(50vw, 360px, calc(100vh - 420px))',
+                },
+                maxWidth: { xs: 220, sm: 280, md: 360 },
+                maxHeight: { xs: 220, sm: 280, md: 360 },
+                borderRadius: { xs: 1.5, sm: 2 },
                 overflow: 'hidden',
                 position: 'relative',
                 zIndex: 1,
-                boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+                boxShadow: { xs: '0 8px 24px rgba(0,0,0,0.4)', sm: '0 12px 40px rgba(0,0,0,0.5)' },
                 transform: 'scale(0.95)',
                 transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                 animation:
@@ -465,16 +518,25 @@ const ExpandedPlayer: React.FC = () => {
         </Box>
 
         {/* Song Info */}
-        <Box sx={{ px: 3, flexShrink: 0, textAlign: 'center' }}>
+        <Box
+          sx={{
+            px: { xs: 1.5, sm: 2, md: 3 },
+            flexShrink: 0,
+            textAlign: 'center',
+            minHeight: { xs: 60, sm: 80 },
+          }}
+        >
           <Typography
             variant="h5"
             sx={{
               color: '#fff',
               fontWeight: 400,
-              fontSize: { xs: '1.5rem', sm: '1.8rem' },
-              mb: 1,
+              fontSize: { xs: '1.1rem', sm: '1.3rem', md: '1.8rem' },
+              mb: { xs: 0.25, sm: 0.5, md: 1 },
               lineHeight: 1.2,
+              px: { xs: 0.5, sm: 1 },
             }}
+            noWrap
           >
             {state.currentStory.title}
           </Typography>
@@ -482,19 +544,33 @@ const ExpandedPlayer: React.FC = () => {
             variant="body1"
             sx={{
               color: alpha('#fff', 0.7),
-              fontSize: { xs: '0.9rem', sm: '1rem' },
-              mb: 3,
+              fontSize: { xs: '0.75rem', sm: '0.85rem', md: '1rem' },
+              mb: { xs: 1.5, sm: 2, md: 3 },
+              px: { xs: 0.5, sm: 1 },
             }}
+            noWrap
           >
             {state.currentStory.creator || 'Unknown Creator'}
           </Typography>
         </Box>
 
         {/* Enhanced Action Bar with Ripple Effects */}
-        <Box sx={{ px: 3, pb: 2, flexShrink: 0 }}>
-          <Stack direction="row" spacing={1} justifyContent="space-around" alignItems="center">
+        <Box
+          sx={{
+            px: { xs: 1.5, sm: 2, md: 3 },
+            pb: { xs: 1, sm: 1.5, md: 2 },
+            flexShrink: 0,
+            minHeight: { xs: 80, sm: 100 },
+          }}
+        >
+          <Stack
+            direction="row"
+            spacing={{ xs: 0.25, sm: 0.5, md: 1 }}
+            justifyContent="space-around"
+            alignItems="center"
+          >
             {/* Enhanced Like Button */}
-            <Box sx={{ textAlign: 'center', minWidth: 70 }}>
+            <Box sx={{ textAlign: 'center', minWidth: { xs: 40, sm: 50, md: 70 } }}>
               <Zoom in={!isLikeAnimating} timeout={200}>
                 <Paper
                   elevation={0}
@@ -518,7 +594,7 @@ const ExpandedPlayer: React.FC = () => {
                   <ButtonBase
                     onClick={handleLikeClick}
                     sx={{
-                      p: 2,
+                      p: { xs: 1.5, sm: 2 },
                       borderRadius: 3,
                       width: '100%',
                       transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -530,7 +606,7 @@ const ExpandedPlayer: React.FC = () => {
                     <Stack alignItems="center" spacing={1}>
                       <Box
                         sx={{
-                          p: 1,
+                          p: { xs: 0.5, sm: 1 },
                           borderRadius: 2,
                           bgcolor: storyLike?.isLiked
                             ? alpha('#ff1744', 0.15)
@@ -542,7 +618,7 @@ const ExpandedPlayer: React.FC = () => {
                           <Favorite
                             sx={{
                               color: '#ff1744',
-                              fontSize: 28,
+                              fontSize: { xs: 24, sm: 28 },
                               filter: 'drop-shadow(0 2px 8px rgba(255, 23, 68, 0.4))',
                             }}
                           />
@@ -550,7 +626,7 @@ const ExpandedPlayer: React.FC = () => {
                           <FavoriteBorder
                             sx={{
                               color: alpha('#fff', 0.8),
-                              fontSize: 28,
+                              fontSize: { xs: 24, sm: 28 },
                             }}
                           />
                         )}
@@ -574,7 +650,7 @@ const ExpandedPlayer: React.FC = () => {
             </Box>
 
             {/* Enhanced Comment Button */}
-            <Box sx={{ textAlign: 'center', minWidth: 70 }}>
+            <Box sx={{ textAlign: 'center', minWidth: { xs: 40, sm: 50, md: 70 } }}>
               <Paper
                 elevation={0}
                 sx={{
@@ -593,7 +669,7 @@ const ExpandedPlayer: React.FC = () => {
                 <ButtonBase
                   onClick={handleCommentClick}
                   sx={{
-                    p: 2,
+                    p: { xs: 1.5, sm: 2 },
                     borderRadius: 3,
                     width: '100%',
                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -605,7 +681,7 @@ const ExpandedPlayer: React.FC = () => {
                   <Stack alignItems="center" spacing={1}>
                     <Box
                       sx={{
-                        p: 1,
+                        p: { xs: 0.5, sm: 1 },
                         borderRadius: 2,
                         bgcolor: alpha('#fff', 0.08),
                         transition: 'all 0.2s ease',
@@ -614,7 +690,7 @@ const ExpandedPlayer: React.FC = () => {
                       <CommentIcon
                         sx={{
                           color: alpha('#fff', 0.8),
-                          fontSize: 28,
+                          fontSize: { xs: 24, sm: 28 },
                         }}
                       />
                     </Box>
@@ -636,7 +712,7 @@ const ExpandedPlayer: React.FC = () => {
             </Box>
 
             {/* Enhanced Share Button */}
-            <Box sx={{ textAlign: 'center', minWidth: 70 }}>
+            <Box sx={{ textAlign: 'center', minWidth: { xs: 40, sm: 50, md: 70 } }}>
               <Paper
                 elevation={0}
                 sx={{
@@ -655,7 +731,7 @@ const ExpandedPlayer: React.FC = () => {
                 <ButtonBase
                   onClick={handleShareClick}
                   sx={{
-                    p: 2,
+                    p: { xs: 1.5, sm: 2 },
                     borderRadius: 3,
                     width: '100%',
                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -667,7 +743,7 @@ const ExpandedPlayer: React.FC = () => {
                   <Stack alignItems="center" spacing={1}>
                     <Box
                       sx={{
-                        p: 1,
+                        p: { xs: 0.5, sm: 1 },
                         borderRadius: 2,
                         bgcolor: alpha('#fff', 0.08),
                         transition: 'all 0.2s ease',
@@ -676,7 +752,7 @@ const ExpandedPlayer: React.FC = () => {
                       <Share
                         sx={{
                           color: alpha('#fff', 0.8),
-                          fontSize: 28,
+                          fontSize: { xs: 24, sm: 28 },
                         }}
                       />
                     </Box>
@@ -696,11 +772,81 @@ const ExpandedPlayer: React.FC = () => {
                 </ButtonBase>
               </Paper>
             </Box>
+
+            {/* Enhanced Support Creator Button */}
+            <Box sx={{ textAlign: 'center', minWidth: { xs: 40, sm: 50, md: 70 } }}>
+              <Paper
+                elevation={0}
+                sx={{
+                  borderRadius: 3,
+                  bgcolor: alpha('#ff9800', 0.12),
+                  border: `1px solid ${alpha('#ff9800', 0.2)}`,
+                  backdropFilter: 'blur(10px)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    bgcolor: alpha('#ff9800', 0.18),
+                    transform: 'translateY(-2px) scale(1.02)',
+                    boxShadow: '0 8px 25px rgba(255, 152, 0, 0.2)',
+                  },
+                }}
+              >
+                <ButtonBase
+                  onClick={handleSupportClick}
+                  sx={{
+                    p: { xs: 1.5, sm: 2 },
+                    borderRadius: 3,
+                    width: '100%',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:active': {
+                      transform: 'scale(0.95)',
+                    },
+                  }}
+                >
+                  <Stack alignItems="center" spacing={1}>
+                    <Box
+                      sx={{
+                        p: { xs: 0.5, sm: 1 },
+                        borderRadius: 2,
+                        bgcolor: alpha('#ff9800', 0.15),
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <VolunteerActivism
+                        sx={{
+                          color: '#ff9800',
+                          fontSize: { xs: 24, sm: 28 },
+                          filter: 'drop-shadow(0 2px 8px rgba(255, 152, 0, 0.3))',
+                        }}
+                      />
+                    </Box>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: '#ff9800',
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      Support
+                    </Typography>
+                  </Stack>
+                </ButtonBase>
+              </Paper>
+            </Box>
           </Stack>
         </Box>
 
         {/* YouTube Music Style Seek Bar */}
-        <Box sx={{ px: 3, pb: 1, flexShrink: 0 }}>
+        <Box
+          sx={{
+            px: { xs: 1.5, sm: 2, md: 3 },
+            pb: { xs: 0.5, sm: 0.75, md: 1 },
+            flexShrink: 0,
+            minHeight: { xs: 40, sm: 50 },
+          }}
+        >
           <Slider
             value={currentTime}
             max={state.duration || 100}
@@ -782,14 +928,26 @@ const ExpandedPlayer: React.FC = () => {
         </Box>
 
         {/* Enhanced Music Controls with Premium Ripples */}
-        <Box sx={{ px: 3, pb: { xs: 2, sm: 3 }, flexShrink: 0 }}>
-          <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
+        <Box
+          sx={{
+            px: { xs: 1.5, sm: 2, md: 3 },
+            pb: { xs: 1.5, sm: 2, md: 3 },
+            flexShrink: 0,
+            minHeight: { xs: 80, sm: 100 },
+          }}
+        >
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="center"
+            spacing={{ xs: 0.5, sm: 1 }}
+          >
             {/* Enhanced Shuffle Button */}
             <ButtonBase
               onClick={handleShuffle}
               sx={{
-                width: 56,
-                height: 56,
+                width: { xs: 48, sm: 56 },
+                height: { xs: 48, sm: 56 },
                 borderRadius: '50%',
                 color: state.isShuffled ? '#fff' : alpha('#fff', 0.7),
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -841,15 +999,15 @@ const ExpandedPlayer: React.FC = () => {
                 },
               }}
             >
-              <Shuffle sx={{ fontSize: 24 }} />
+              <Shuffle sx={{ fontSize: { xs: 20, sm: 24 } }} />
             </ButtonBase>
 
             {/* Enhanced Previous Button */}
             <ButtonBase
               onClick={handleSkipPrevious}
               sx={{
-                width: 64,
-                height: 64,
+                width: { xs: 56, sm: 64 },
+                height: { xs: 56, sm: 64 },
                 borderRadius: '50%',
                 color: '#fff',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -872,36 +1030,36 @@ const ExpandedPlayer: React.FC = () => {
                 },
               }}
             >
-              <SkipPrevious sx={{ fontSize: 36 }} />
+              <SkipPrevious sx={{ fontSize: { xs: 30, sm: 36 } }} />
             </ButtonBase>
 
             {/* Enhanced Play/Pause Button */}
             {state.isLoading || state.isBuffering ? (
               <Box
                 sx={{
-                  width: 80,
-                  height: 80,
+                  width: { xs: 72, sm: 80 },
+                  height: { xs: 72, sm: 80 },
                   borderRadius: '50%',
                   bgcolor: '#fff',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  mx: 2,
+                  mx: { xs: 1.5, sm: 2 },
                   boxShadow: '0 6px 24px rgba(255, 255, 255, 0.25)',
                 }}
               >
-                <CircularProgress size={28} sx={{ color: '#121212' }} />
+                <CircularProgress size={24} sx={{ color: '#121212' }} />
               </Box>
             ) : (
               <ButtonBase
                 onClick={handlePlayPause}
                 sx={{
-                  width: 80,
-                  height: 80,
+                  width: { xs: 72, sm: 80 },
+                  height: { xs: 72, sm: 80 },
                   borderRadius: '50%',
                   bgcolor: '#fff',
                   color: '#121212',
-                  mx: 2,
+                  mx: { xs: 1.5, sm: 2 },
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   boxShadow: '0 6px 24px rgba(255, 255, 255, 0.25)',
                   position: 'relative',
@@ -944,9 +1102,9 @@ const ExpandedPlayer: React.FC = () => {
                 }}
               >
                 {state.isPlaying ? (
-                  <Pause sx={{ fontSize: 36, zIndex: 1 }} />
+                  <Pause sx={{ fontSize: { xs: 30, sm: 36 }, zIndex: 1 }} />
                 ) : (
-                  <PlayArrow sx={{ fontSize: 36, zIndex: 1 }} />
+                  <PlayArrow sx={{ fontSize: { xs: 30, sm: 36 }, zIndex: 1 }} />
                 )}
               </ButtonBase>
             )}
@@ -955,8 +1113,8 @@ const ExpandedPlayer: React.FC = () => {
             <ButtonBase
               onClick={handleSkipNext}
               sx={{
-                width: 64,
-                height: 64,
+                width: { xs: 56, sm: 64 },
+                height: { xs: 56, sm: 64 },
                 borderRadius: '50%',
                 color: '#fff',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -979,15 +1137,15 @@ const ExpandedPlayer: React.FC = () => {
                 },
               }}
             >
-              <SkipNext sx={{ fontSize: 36 }} />
+              <SkipNext sx={{ fontSize: { xs: 30, sm: 36 } }} />
             </ButtonBase>
 
             {/* Enhanced Repeat Button */}
             <ButtonBase
               onClick={handleRepeat}
               sx={{
-                width: 56,
-                height: 56,
+                width: { xs: 48, sm: 56 },
+                height: { xs: 48, sm: 56 },
                 borderRadius: '50%',
                 color: state.isRepeated ? '#fff' : alpha('#fff', 0.7),
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1025,11 +1183,20 @@ const ExpandedPlayer: React.FC = () => {
                   : {},
               }}
             >
-              <Repeat sx={{ fontSize: 24 }} />
+              <Repeat sx={{ fontSize: { xs: 20, sm: 24 } }} />
             </ButtonBase>
           </Stack>
         </Box>
       </Box>
+
+      {/* Payment Drawer for donations */}
+      <PaymentDrawer
+        open={paymentDrawerOpen}
+        onClose={() => setPaymentDrawerOpen(false)}
+        story={state.currentStory}
+        onPaymentSuccess={handlePaymentSuccess}
+        isDonation={true}
+      />
     </Drawer>
   );
 };

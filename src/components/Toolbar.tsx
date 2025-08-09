@@ -95,8 +95,8 @@ export default function Toolbar({
     >
       <MuiToolbar
         sx={{
-          minHeight: '64px !important',
-          px: { xs: 2, sm: 3 },
+          minHeight: { xs: '56px !important', sm: '64px !important' },
+          px: { xs: 1.5, sm: 2, md: 3 },
           justifyContent: 'space-between',
         }}
       >
@@ -126,11 +126,15 @@ export default function Toolbar({
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                mr: { xs: 2, sm: 3 },
+                mr: { xs: 1.5, sm: 2, md: 3 },
                 color: '#ff0000',
               }}
             >
-              <Iconify icon="material-symbols:music-note" width={24} height={24} />
+              <Iconify
+                icon="material-symbols:music-note"
+                width={{ xs: 20, sm: 24 }}
+                height={{ xs: 20, sm: 24 }}
+              />
               <Typography
                 variant="h6"
                 sx={{
@@ -150,7 +154,8 @@ export default function Toolbar({
             sx={{
               fontWeight: 500,
               color: theme.palette.text.primary,
-              fontSize: '1.125rem',
+              fontSize: { xs: '1rem', sm: '1.125rem' },
+              display: { xs: title ? 'block' : 'none', sm: 'block' },
             }}
           >
             {title}
@@ -163,8 +168,8 @@ export default function Toolbar({
             display: 'flex',
             justifyContent: 'center',
             flex: '1 1 auto',
-            maxWidth: '640px',
-            mx: { xs: 1, sm: 3 },
+            maxWidth: { xs: '300px', sm: '480px', md: '640px' },
+            mx: { xs: 0.5, sm: 2, md: 3 },
           }}
         >
           {onSearch && (
@@ -172,7 +177,7 @@ export default function Toolbar({
               sx={{
                 position: 'relative',
                 width: '100%',
-                maxWidth: '540px',
+                maxWidth: { xs: '280px', sm: '400px', md: '540px' },
               }}
             >
               <TextField
@@ -216,7 +221,7 @@ export default function Toolbar({
                     </InputAdornment>
                   ),
                   sx: {
-                    height: '40px',
+                    height: { xs: '36px', sm: '40px' },
                     bgcolor: theme.palette.mode === 'dark' ? '#1c1c1c' : '#f1f3f4',
                     borderRadius: '20px',
                     '& .MuiOutlinedInput-notchedOutline': {
@@ -239,7 +244,7 @@ export default function Toolbar({
                 sx={{
                   '& .MuiInputBase-input': {
                     color: theme.palette.text.primary,
-                    fontSize: '16px',
+                    fontSize: { xs: '14px', sm: '16px' },
                     fontWeight: 400,
                     '&::placeholder': {
                       color: theme.palette.text.secondary,
@@ -253,8 +258,10 @@ export default function Toolbar({
         </Box>
 
         {/* Right Section - Action Buttons */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-          <Stack direction="row" spacing={0.5} alignItems="center">
+        <Box
+          sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flex: '0 0 auto' }}
+        >
+          <Stack direction="row" spacing={{ xs: 0.25, sm: 0.5 }} alignItems="center">
             {/* Settings Action */}
             {singleAction &&
               (typeof singleAction === 'object' &&
@@ -270,7 +277,11 @@ export default function Toolbar({
                     },
                   }}
                 >
-                  <Iconify icon={singleAction.icon} width={24} height={24} />
+                  <Iconify
+                    icon={singleAction.icon}
+                    width={{ xs: 20, sm: 24 }}
+                    height={{ xs: 20, sm: 24 }}
+                  />
                 </IconButton>
               ) : (
                 singleAction
@@ -289,7 +300,11 @@ export default function Toolbar({
                     },
                   }}
                 >
-                  <Iconify icon="material-symbols:more-vert" width={24} height={24} />
+                  <Iconify
+                    icon="material-symbols:more-vert"
+                    width={{ xs: 20, sm: 24 }}
+                    height={{ xs: 20, sm: 24 }}
+                  />
                 </IconButton>
                 <Menu
                   anchorEl={anchorEl}
